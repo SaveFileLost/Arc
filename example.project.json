@@ -3,16 +3,19 @@
     "tree": {
         "$className": "DataModel",
         "ServerScriptService": {
+            "$className": "ServerScriptService",
             "GameServer": {
                 "$path": "example/game.server.lua"
             }
         },
         "ServerStorage": {
+            "$className": "ServerStorage",
             "Server": {
                 "$path": "example/server"
             }
         },
         "ReplicatedStorage": {
+            "$className": "ReplicatedStorage",
             "Common": {
                 "$path": "example/common"
             },
@@ -24,7 +27,9 @@
             }
         },
         "StarterPlayer": {
+            "$className": "StarterPlayer",
             "StarterPlayerScripts": {
+                "$className": "StarterPlayerScripts",
                 "GameClient": {
                     "$path": "example/game.client.lua"
                 }
