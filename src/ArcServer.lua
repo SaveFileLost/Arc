@@ -1,9 +1,18 @@
-local requireFolder = require(script.Parent.requireFolder)
-local TableReserver = require(script.Parent.TableReserver)
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local requireFolder = require(script.Parent.Utility.requireFolder)
+local getTime = require(script.Parent.Utility.getTime)
+
+local TableReserver = require(script.Parent.Classes.TableReserver)
+local Client = require(script.Parent.Classes.Client)
+
 local Controllers = require(script.Parent.Controllers)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
+local START_TIME: number
+local networkRemote: RemoteEvent
 
 local serviceReserver = TableReserver.new()
 local serviceMap: PubTypes.Map<string, PubTypes.Service> = {}
@@ -31,16 +40,9 @@ local function Service(name: string): PubTypes.Service
     return service
 end
 
-local function start()
-    assert(TICK_RATE ~= nil, "Tickrate not set")
-
-    local networkRemote = Instance.new("RemoteEvent")
-    networkRemote.Name = "Network"
-    networkRemote:SetAttribute("TickRate", TICK_RATE)
-    networkRemote.Parent = script.Parent
-
-    -- check for undeclared services
-    for name in pairs(serviceReserver.reserve) do
+local function startServices()
+     -- check for undeclared services
+     for name in pairs(serviceReserver.reserve) do
         assert(serviceMap[name] ~= nil, `Service {name} is never defined`)
     end
 
@@ -51,13 +53,81 @@ local function start()
     for _, service in pairs(serviceMap) do
         service:start()
     end
+end
 
+local clients = {}
+
+local function receiveCommand(sender: Player, command)
+    local client = clients[sender]
+    client:pushCommand(command)
+end
+
+local function onPlayerJoined(player: Player)
+    clients[player] = Client.new(player)
+end
+
+local function onPlayerLeft(player: Player)
+    clients[player] = nil
+end
+
+local function processTick()
+    -- Simulate
+    for _, client in pairs(clients) do
+        client:processCommands()
+    end
+
+    -- Send snapshots
+    for player, client in pairs(clients) do
+        -- client hasnt simulated anything yet, dont send this
+        if client.lastSimulatedTick == nil then continue end
+
+        local snapshot = {
+            tick = client.lastSimulatedTick;
+            state = client.state;
+        }
+        networkRemote:FireClient(player, snapshot)
+    end
+end
+
+local currentTick: number
+local function onHeartbeat()
+    local nextTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
+
+    while currentTick < nextTick do
+        processTick()
+        currentTick += 1
+    end
+end
+
+local function start()
+    assert(TICK_RATE ~= nil, "Tickrate not set")
+
+    START_TIME = getTime()
+    currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
+
+    networkRemote = Instance.new("RemoteEvent")
+    networkRemote.Name = "Network"
+    networkRemote:SetAttribute("TickRate", TICK_RATE)
+    networkRemote:SetAttribute("StartTime", START_TIME)
+    networkRemote.Parent = script.Parent
+
+    startServices()
     Controllers.start()
+
+    networkRemote.OnServerEvent:Connect(receiveCommand)
+    Players.PlayerAdded:Connect(onPlayerJoined)
+    Players.PlayerRemoving:Connect(onPlayerLeft)
+    RunService.Heartbeat:Connect(onHeartbeat)
 end
 
 return table.freeze({
+    IS_SERVER = RunService:IsServer();
+    IS_CLIENT = RunService:IsClient();
+
     getTickRate = getTickRate;
     setTickRate = setTickRate;
+
+    getTime = getTime;
 
     getService = getService;
     Service = Service;
