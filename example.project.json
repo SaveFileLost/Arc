@@ -15,6 +15,12 @@
         "ReplicatedStorage": {
             "Common": {
                 "$path": "example/common"
+            },
+            "Packages": {
+                "$className": "Folder",
+                "Arc": {
+                    "$path": "default.project.json"
+                }
             }
         },
         "StarterPlayer": {
