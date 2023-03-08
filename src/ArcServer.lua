@@ -1,5 +1,6 @@
 local requireFolder = require(script.Parent.requireFolder)
 local TableReserver = require(script.Parent.TableReserver)
+local Controllers = require(script.Parent.Controllers)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
@@ -33,6 +34,11 @@ end
 local function start()
     assert(TICK_RATE ~= nil, "Tickrate not set")
 
+    local networkRemote = Instance.new("RemoteEvent")
+    networkRemote.Name = "Network"
+    networkRemote:SetAttribute("TickRate", TICK_RATE)
+    networkRemote.Parent = script.Parent
+
     -- check for undeclared services
     for name in pairs(serviceReserver.reserve) do
         assert(serviceMap[name] ~= nil, `Service {name} is never defined`)
@@ -45,6 +51,8 @@ local function start()
     for _, service in pairs(serviceMap) do
         service:start()
     end
+
+    Controllers.start()
 end
 
 return table.freeze({
@@ -53,6 +61,9 @@ return table.freeze({
 
     getService = getService;
     Service = Service;
+
+    getController = Controllers.getController;
+    Controller = Controllers.Controller;
 
     addFolder = requireFolder;
     start = start;

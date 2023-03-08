@@ -8,4 +8,14 @@ export type Service = {
     start: (self: Service) -> ();
 }
 
+export type Controller = {
+    name: string;
+    simulationPriority: number?;
+    
+    init: (self: Controller) -> ();
+    start: (self: Controller) -> ();
+
+    simulate: ((self: Controller, plr: Player, input: Map<any, any>) -> ())?;
+}
+
 return nil
