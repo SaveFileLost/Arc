@@ -1,0 +1,28 @@
+{
+    "name": "arc-example",
+    "tree": {
+        "$className": "DataModel",
+        "ServerScriptService": {
+            "GameServer": {
+                "$path": "example/game.server.lua"
+            }
+        },
+        "ServerStorage": {
+            "Server": {
+                "$path": "example/server"
+            }
+        },
+        "ReplicatedStorage": {
+            "Common": {
+                "$path": "example/common"
+            }
+        },
+        "StarterPlayer": {
+            "StarterPlayerScripts": {
+                "GameClient": {
+                    "$path": "example/game.client.lua"
+                }
+            }
+        }
+    }
+}
