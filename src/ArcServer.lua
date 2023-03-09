@@ -3,11 +3,13 @@ local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
+local CommandUtils = require(script.Parent.Utility.CommandUtils)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
 
 local Controllers = require(script.Parent.Controllers)
+local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
@@ -57,7 +59,9 @@ end
 
 local clients = {}
 
-local function receiveCommand(sender: Player, command)
+local function receiveCommand(sender: Player, serializedCommand)
+    local command = CommandUtils.deserializeCommand(serializedCommand, Input.getInputReader())
+
     local client = clients[sender]
     client:pushCommand(command)
 end
@@ -101,6 +105,7 @@ end
 
 local function start()
     assert(TICK_RATE ~= nil, "Tickrate not set")
+    Input.checkSetup()
 
     START_TIME = getTime()
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
@@ -126,8 +131,11 @@ return table.freeze({
 
     getTickRate = getTickRate;
     setTickRate = setTickRate;
-
     getTime = getTime;
+    
+    setInputBuilder = Input.setInputBuilder;
+    setInputWriter = Input.setInputWriter;
+    setInputReader = Input.setInputReader;
 
     getService = getService;
     Service = Service;

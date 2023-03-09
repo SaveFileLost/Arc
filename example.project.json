@@ -20,8 +20,8 @@
                 "$path": "example/common"
             },
             "Packages": {
-                "$className": "Folder",
-                "Arc": {
+                "$path": "Packages",
+                "arc": {
                     "$path": "default.project.json"
                 }
             }

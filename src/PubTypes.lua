@@ -20,12 +20,23 @@ export type Controller = {
     frameSimulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
 }
 
+export type Command = {
+    tick: number;
+    input: Input;
+}
+
 export type Input = Map<string, any>
-export type InputBuilder = (Input) -> Input
+export type InputBuilder = (input: Input) -> Input
+export type InputWriter = (input: Input, buffer: any) -> ()
+export type InputReader = (input: Input, buffer: any) -> ();
 
 export type ArcCommon = {
     IS_SERVER: boolean;
     IS_CLIENT: boolean;
+
+    setInputBuilder: (builder: InputBuilder) -> ();
+    setInputWriter: (serializer: InputWriter) -> ();
+    setInputReader: (reader: InputReader) -> ();
 
     getTickRate: () -> number;
     getTime: () -> number;
@@ -46,7 +57,7 @@ export type ArcServer = {
 }
 
 export type ArcClient = {
-    setInputBuilder: (builder: InputBuilder) -> ();
+
 }
 
 return nil
