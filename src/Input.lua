@@ -1,4 +1,4 @@
-local BitBuffer = require(script.Parent.Parent.bitbuffer)
+local BitBuffer = require(script.Parent.Classes.BitBuffer)
 local PubTypes = require(script.Parent.PubTypes)
 
 local inputBuilder: PubTypes.InputBuilder
@@ -24,13 +24,13 @@ local function buildInput(): PubTypes.Input
 end
 
 local function serializeInput(input: PubTypes.Input): string
-    local buffer = BitBuffer()
+    local buffer = BitBuffer.new()
     inputWriter(input, buffer)
-    return buffer.dumpString()
+    return buffer:toString()
 end
 
 local function deserializeInput(bitStr: string): PubTypes.Input
-    local buffer = BitBuffer(bitStr)
+    local buffer = BitBuffer.fromString(bitStr)
     local input = {}
 
     inputReader(input, buffer)

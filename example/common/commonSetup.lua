@@ -22,15 +22,15 @@ local function buildInput(input)
 end
 
 local function writeInput(input, buffer)
-    buffer.writeVector3(input.moveDirection)
-    buffer.writeFloat64(input.camAngleX)
-    buffer.writeFloat64(input.camAngleY)
+    buffer:writeVector3(input.moveDirection)
+    buffer:writeFloat64(input.camAngleX)
+    buffer:writeFloat64(input.camAngleY)
 end
 
 local function readInput(input, buffer)
-    input.moveDirection = buffer.readVector3()
-    input.camAngleX = buffer.readFloat64()
-    input.camAngleY = buffer.readFloat64()
+    input.moveDirection = buffer:readVector3()
+    input.camAngleX = buffer:readFloat64()
+    input.camAngleY = buffer:readFloat64()
 end
 
 local function commonSetup()
