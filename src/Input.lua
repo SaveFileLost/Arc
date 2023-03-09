@@ -23,7 +23,7 @@ local function buildInput(): PubTypes.Input
     return input
 end
 
-local function serializeInput(input: PubTypes.Input)
+local function serializeInput(input: PubTypes.Input): string
     local buffer = BitBuffer()
     inputWriter(input, buffer)
     return buffer.dumpString()
