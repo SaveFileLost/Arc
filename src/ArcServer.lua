@@ -8,6 +8,7 @@ local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
 
 local Controllers = require(script.Parent.Controllers)
+local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
@@ -101,6 +102,7 @@ end
 
 local function start()
     assert(TICK_RATE ~= nil, "Tickrate not set")
+    Input.checkSetup()
 
     START_TIME = getTime()
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
@@ -126,8 +128,11 @@ return table.freeze({
 
     getTickRate = getTickRate;
     setTickRate = setTickRate;
-
     getTime = getTime;
+    
+    setInputBuilder = Input.setInputBuilder;
+    setInputWriter = Input.setInputWriter;
+    setInputReader = Input.setInputReader;
 
     getService = getService;
     Service = Service;

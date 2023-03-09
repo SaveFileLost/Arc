@@ -8,13 +8,13 @@ local getTime = require(script.Parent.Utility.getTime)
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
 local Controllers = require(script.Parent.Controllers)
+local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
 local START_TIME: number
 
 local networkRemote: RemoteEvent
-local buildInput: () -> PubTypes.Input
 
 local currentTick: number
 local inputBuffer
@@ -24,14 +24,6 @@ local playerState = {}
 
 local function getTickRate(): number
     return TICK_RATE
-end
-
-local function setInputBuilder(inputBuilder: PubTypes.InputBuilder)
-    buildInput = function()
-        local input = {}
-        inputBuilder(input)
-        return input
-    end
 end
 
 local function predict(tick: number)
@@ -79,7 +71,7 @@ end
 local function processTick()
     processSnapshots()
     
-    local input = buildInput()
+    local input = Input.buildInput()
     inputBuffer:set(currentTick, input)
 
     local command = {
@@ -108,11 +100,11 @@ local function onPreRender()
     local latestState = predictedStateBuffer:latest()
     if latestState == nil then return end
 
-    Controllers.frameSimulate(latestState, buildInput())
+    Controllers.frameSimulate(latestState, Input.buildInput())
 end
 
 local function start()
-    assert(buildInput ~= nil, "Input builder is not set")
+    Input.checkSetup()
 
     networkRemote = script.Parent:WaitForChild("Network")
     
@@ -136,9 +128,11 @@ return table.freeze({
     IS_CLIENT = RunService:IsClient();
 
     getTickRate = getTickRate;
-    setInputBuilder = setInputBuilder;
-
     getTime = getTime;
+
+    setInputBuilder = Input.setInputBuilder;
+    setInputWriter = Input.setInputWriter;
+    setInputReader = Input.setInputReader;
 
     getController = Controllers.getController;
     Controller = Controllers.Controller;
