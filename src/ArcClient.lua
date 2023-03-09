@@ -76,7 +76,7 @@ local function processTick()
 
     local command = {
         tick = currentTick;
-        input = input;
+        input = Input.serializeInput(input);
     }
     networkRemote:FireServer(command)
 

@@ -59,6 +59,8 @@ end
 local clients = {}
 
 local function receiveCommand(sender: Player, command)
+    command.input = Input.deserializeInput(command.input)
+
     local client = clients[sender]
     client:pushCommand(command)
 end
