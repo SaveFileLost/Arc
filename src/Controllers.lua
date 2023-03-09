@@ -21,6 +21,7 @@ local function Controller(name: string): PubTypes.Controller
 end
 
 local simulatableControllers: PubTypes.List<PubTypes.Controller> = {}
+local frameSimulatableControllers: PubTypes.List<PubTypes.Controller> = {}
 
 local function start()
     -- check for undeclared controllers
@@ -32,13 +33,17 @@ local function start()
         if controller.simulate ~= nil then
             table.insert(simulatableControllers, controller)
         end
+
+        if controller.frameSimulate ~= nil then
+            table.insert(frameSimulatableControllers, controller)
+        end
         
         controller:init()
     end
 
     -- priority goes from lesser to higher
     table.sort(simulatableControllers, function(ct1, ct2)
-        return ct1.simulationPriority < ct2.simulationPriority
+        return (ct1.simulationPriority or 0) < (ct2.simulationPriority or 0)
     end)
 
     for _, controller in pairs(controllerMap) do
@@ -52,6 +57,12 @@ local function simulate(playerState: PubTypes.Map<any, any>, input: PubTypes.Inp
     end
 end
 
+local function frameSimulate(playerState: PubTypes.Map<string, any>, input: PubTypes.Input)
+    for _, controller in ipairs(frameSimulatableControllers) do
+        controller:frameSimulate(playerState, input)
+    end
+end
+
 return table.freeze({
     getController = getController;
     Controller = Controller;
@@ -59,4 +70,5 @@ return table.freeze({
     start = start;
 
     simulate = simulate;
+    frameSimulate = frameSimulate;
 })

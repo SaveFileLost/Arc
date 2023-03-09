@@ -53,6 +53,7 @@ local function reconcile(serverPlayerState, serverTick)
     if deepIsEqual(predictedState, serverPlayerState) then return end
 
     warn(`Prediction error on tick {serverTick}, reconciling`)
+    warn("Predicted", predictedState, "Server", serverPlayerState)
     -- would be neat if we could tell what exactly caused the misprediction
 
     -- Initial reconciliation. Correct initial state
@@ -61,13 +62,23 @@ local function reconcile(serverPlayerState, serverTick)
 
     -- Re-predict everything that was mispredicted as a result of the faulty tick
     local tickToReconcile = serverTick + 1 -- serverTick is initial, we already have the state for it.
-    while tickToReconcile <= currentTick do
+    while tickToReconcile < currentTick do
         predict(tickToReconcile)
         tickToReconcile += 1
     end
 end
 
+local pendingSnapshots = {}
+local function processSnapshots()
+    for i = #pendingSnapshots, 1, -1 do
+        local snapshot = table.remove(pendingSnapshots, #pendingSnapshots)
+        reconcile(snapshot.state, snapshot.tick)
+    end
+end
+
 local function processTick()
+    processSnapshots()
+    
     local input = buildInput()
     inputBuffer:set(currentTick, input)
 
@@ -81,7 +92,7 @@ local function processTick()
 end
 
 local function onNetworkReceive(snapshot)
-    reconcile(snapshot.state, snapshot.tick)
+    table.insert(pendingSnapshots, 1, snapshot)
 end
 
 local function onHeartbeat()
@@ -91,6 +102,13 @@ local function onHeartbeat()
         processTick()
         currentTick += 1
     end
+end
+
+local function onPreRender()
+    local latestState = predictedStateBuffer:latest()
+    if latestState == nil then return end
+
+    Controllers.frameSimulate(latestState, buildInput())
 end
 
 local function start()
@@ -110,6 +128,7 @@ local function start()
 
     networkRemote.OnClientEvent:Connect(onNetworkReceive)
     RunService.Heartbeat:Connect(onHeartbeat)
+    RunService.PreRender:Connect(onPreRender)
 end
 
 return table.freeze({

@@ -16,7 +16,8 @@ export type Controller = {
     init: (self: Controller) -> ();
     start: (self: Controller) -> ();
 
-    simulate: (self: Controller, plr: Map<string, any>, input: Input) -> ();
+    simulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
+    frameSimulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
 }
 
 export type Input = Map<string, any>

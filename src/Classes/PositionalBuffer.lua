@@ -20,6 +20,10 @@ function PositionalBuffer:set(pos: number, value)
 	self._buffer[self._size - self._maxSize] = nil
 end
 
+function PositionalBuffer:latest()
+	return self._buffer[self._size]
+end
+
 function PositionalBuffer:clear()
 	self._size = 0
 	table.clear(self._buffer)
