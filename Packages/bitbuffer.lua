@@ -1,1 +1,1 @@
-return require(script.Parent._Index["dekkonot_bitbuffer@1.1.1"]["bitbuffer"])
+return require(script.Parent._Index["rstk_bitbuffer@1.0.0"]["bitbuffer"])
