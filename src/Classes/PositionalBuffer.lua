@@ -14,7 +14,7 @@ function PositionalBuffer:get(pos: number)
 end
 
 function PositionalBuffer:set(pos: number, value)
-	self._size += 1
+	self._size = math.max(self._size, pos)
 	self._buffer[pos] = value
 	
 	self._buffer[self._size - self._maxSize] = nil
