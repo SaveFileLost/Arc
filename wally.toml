@@ -1,7 +1,8 @@
 [package]
-name = "arc"
+name = "savefilelost/arc"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
+bitbuffer = "dekkonot/bitbuffer@1.1.1"
