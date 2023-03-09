@@ -20,6 +20,11 @@ export type Controller = {
     frameSimulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
 }
 
+export type Command = {
+    tick: number;
+    input: Input;
+}
+
 export type Input = Map<string, any>
 export type InputBuilder = (input: Input) -> Input
 export type InputWriter = (input: Input, buffer: any) -> ()

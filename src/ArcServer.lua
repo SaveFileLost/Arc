@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
+local CommandUtils = require(script.Parent.Utility.CommandUtils)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
@@ -58,8 +59,8 @@ end
 
 local clients = {}
 
-local function receiveCommand(sender: Player, command)
-    command.input = Input.deserializeInput(command.input)
+local function receiveCommand(sender: Player, serializedCommand)
+    local command = CommandUtils.deserializeCommand(serializedCommand, Input.getInputReader())
 
     local client = clients[sender]
     client:pushCommand(command)

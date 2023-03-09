@@ -17,24 +17,17 @@ local function setInputReader(reader: PubTypes.InputReader)
     inputReader = reader
 end
 
+local function getInputWriter(): PubTypes.InputWriter
+    return inputWriter
+end
+
+local function getInputReader(): PubTypes.InputReader
+    return inputReader
+end
+
 local function buildInput(): PubTypes.Input
     local input = {}
     inputBuilder(input)
-    return input
-end
-
-local function serializeInput(input: PubTypes.Input): string
-    local buffer = BitBuffer.new()
-    inputWriter(input, buffer)
-    return buffer:toString()
-end
-
-local function deserializeInput(bitStr: string): PubTypes.Input
-    local buffer = BitBuffer.fromString(bitStr)
-    local input = {}
-
-    inputReader(input, buffer)
-
     return input
 end
 
@@ -50,8 +43,8 @@ return table.freeze({
     setInputReader = setInputReader;
 
     buildInput = buildInput;
-    serializeInput = serializeInput;
-    deserializeInput = deserializeInput;
+    getInputWriter = getInputWriter;
+    getInputReader = getInputReader;
 
     checkSetup = checkSetup;
 })

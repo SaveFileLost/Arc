@@ -11,6 +11,14 @@ function BitBuffer.fromString(str: string)
     return setmetatable({_buffer = RstkBitBuffer.FromString(str)}, BitBuffer)
 end
 
+function BitBuffer:writeUInt(bitWidth: number, n: number)
+    self._buffer:WriteUInt(bitWidth, n)
+end
+
+function BitBuffer:readUInt(bitWidth: number): number
+    return self._buffer:ReadUInt(bitWidth)
+end
+
 function BitBuffer:writeFloat32(f: number)
     self._buffer:WriteFloat32(f)
 end
@@ -25,6 +33,14 @@ end
 
 function BitBuffer:readFloat64(): number
     return self._buffer:ReadFloat64()
+end
+
+function BitBuffer:writeString(str: string)
+    return self._buffer:WriteString(str)
+end
+
+function BitBuffer:readString(str: string)
+    return self._buffer:ReadString(str)
 end
 
 function BitBuffer:writeVector3(v: Vector3)

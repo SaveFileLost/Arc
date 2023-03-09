@@ -4,6 +4,7 @@ local requireFolder = require(script.Parent.Utility.requireFolder)
 local deepCopy = require(script.Parent.Utility.deepCopy)
 local deepIsEqual = require(script.Parent.Utility.deepIsEqual)
 local getTime = require(script.Parent.Utility.getTime)
+local CommandUtils = require(script.Parent.Utility.CommandUtils)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
@@ -74,10 +75,11 @@ local function processTick()
     local input = Input.buildInput()
     inputBuffer:set(currentTick, input)
 
-    local command = {
-        tick = currentTick;
-        input = Input.serializeInput(input);
-    }
+    local command = CommandUtils.generateSerializedCommand(
+        currentTick,
+        input,
+        Input.getInputWriter()
+    )
     networkRemote:FireServer(command)
 
     predict(currentTick)
