@@ -1,6 +1,6 @@
 local UserInputService = game:GetService("UserInputService")
 
-local Arc = require(game.ReplicatedStorage.Packages.Arc)
+local Arc = require(game.ReplicatedStorage.Packages.arc)
 local Util = require(game.ReplicatedStorage.Common.Util)
 
 local camAngleX = 0
