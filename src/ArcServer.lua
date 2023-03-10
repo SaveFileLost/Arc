@@ -3,7 +3,9 @@ local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
+local deepCopy = require(script.Parent.Utility.deepCopy)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
+local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
 local Comparison = require(script.Parent.Utility.Comparison)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
@@ -96,17 +98,28 @@ local function processTick()
     for _, client in pairs(clients) do
         client:processCommands()
     end
+    
+    -- copy the entity map
+    local allEntities = Entities.getAll()
+
+    -- initialize snapshot
+    local snapshot: PubTypes.Snapshot = {
+        tick = 0;
+        clientId = 0;
+        entities = allEntities;
+    }
 
     -- Send snapshots
     for player, client in pairs(clients) do
         -- client hasnt simulated anything yet, dont send this
         if client.lastSimulatedTick == nil then continue end
 
-        local snapshot = {
-            tick = client.lastSimulatedTick;
-            state = client.state;
-        }
-        networkRemote:FireClient(player, snapshot)
+        --personalize snapshot for this client
+        snapshot.tick = client.lastSimulatedTick
+        snapshot.clientId = client.entity.id
+
+        local serializedSnapshot = SnapshotUtils.serialize(snapshot)
+        networkRemote:FireClient(player, serializedSnapshot)
     end
 end
 

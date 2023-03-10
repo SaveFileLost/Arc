@@ -49,21 +49,27 @@ export type Command = {
     input: Input;
 }
 
+export type Snapshot = {
+    tick: number;
+    clientId: number;
+    entities: List<Entity>;
+}
+
 export type BitBuffer = {
     writeUInt: (self: BitBuffer, bitWidth: number, n: number) -> ();
-    readUInt: (self: BitBuffer, bitWidth: number) -> ();
+    readUInt: (self: BitBuffer, bitWidth: number) -> number;
 
     writeFloat32: (self: BitBuffer, f: number) -> ();
-    readFloat32: (self: BitBuffer) -> ();
+    readFloat32: (self: BitBuffer) -> number;
 
     writeFloat64: (self: BitBuffer, f: number) -> ();
-    readFloat64: (self: BitBuffer) -> ();
+    readFloat64: (self: BitBuffer) -> number;
 
     writeString: (self: BitBuffer, str: string) -> ();
-    readString: (self: BitBuffer) -> ();
+    readString: (self: BitBuffer) -> string;
 
     writeVector3: (self: BitBuffer, vec: Vector3) -> ();
-    readVector3: (self: BitBuffer) -> ();
+    readVector3: (self: BitBuffer) -> Vector3;
 
     toString: (self: BitBuffer) -> string;
 }

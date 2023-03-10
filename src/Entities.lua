@@ -142,9 +142,7 @@ local function setKindIdentifiersFromJson(kindIdents: string)
     end
 end
 
-local function serialize(ent: Types.Entity): string
-    local buffer = BitBuffer.new()
-
+local function serialize(ent: Types.Entity, buffer: PubTypes.BitBuffer): string
     buffer:writeUInt(16, kindToIdMap[ent.kind])
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
@@ -154,9 +152,7 @@ local function serialize(ent: Types.Entity): string
     return buffer:toString()
 end
 
-local function deserialize(str: string): PubTypes.Entity
-    local buffer = BitBuffer.fromString(str)
-
+local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
     local kind = idToKindMap[buffer:readUInt(16)]
     local entity = createEntity(kind)
 
@@ -165,6 +161,15 @@ local function deserialize(str: string): PubTypes.Entity
     entityKinds[kind].reader(entity, buffer)
 
     return entity
+end
+
+local function getAll(): PubTypes.List<PubTypes.Entity>
+    local entList = {}
+    for _, v in pairs(entities) do
+        table.insert(entList, v)
+    end
+
+    return entList
 end
 
 return table.freeze({
@@ -182,4 +187,6 @@ return table.freeze({
     setKindIdentifiersFromJson = setKindIdentifiersFromJson;
     serialize = serialize;
     deserialize = deserialize;
+
+    getAll = getAll;
 })
