@@ -9,6 +9,7 @@ local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
 
 local Controllers = require(script.Parent.Controllers)
+local Entities = require(script.Parent.Entities)
 local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
@@ -25,6 +26,11 @@ end
 
 local function setTickRate(rate: number)
     TICK_RATE = rate
+end
+
+local clientEntityKind: string
+local function setClientKind(entityKind: string)
+    clientEntityKind = entityKind
 end
 
 local function getService(name: string): PubTypes.Service
@@ -131,6 +137,8 @@ return table.freeze({
 
     getTickRate = getTickRate;
     setTickRate = setTickRate;
+    setClientKind = setClientKind;
+
     getTime = getTime;
     
     setInputBuilder = Input.setInputBuilder;
@@ -142,6 +150,9 @@ return table.freeze({
 
     getController = Controllers.getController;
     Controller = Controllers.Controller;
+
+    spawnEntity = Entities.spawnEntity;
+    Entity = Entities.Entity;
 
     addFolder = requireFolder;
     start = start;

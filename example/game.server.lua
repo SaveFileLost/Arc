@@ -3,6 +3,8 @@ local commonSetup = require(game.ReplicatedStorage.Common.commonSetup)
 
 Arc.setTickRate(66)
 
+require(game.ReplicatedStorage.Common.EntityDefinitions)
+
 commonSetup()
 
 Arc.addFolder(game.ServerStorage.Server.Services)

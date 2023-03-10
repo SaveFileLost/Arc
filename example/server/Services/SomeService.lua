@@ -7,7 +7,7 @@ function SomeService:init()
 end
 
 function SomeService:start()
-    print("service started")
+    
 end
 
 return nil

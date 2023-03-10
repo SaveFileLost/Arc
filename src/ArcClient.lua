@@ -9,6 +9,7 @@ local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
 local Controllers = require(script.Parent.Controllers)
+local Entities = require(script.Parent.Entities)
 local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
@@ -138,6 +139,9 @@ return table.freeze({
 
     getController = Controllers.getController;
     Controller = Controllers.Controller;
+
+    spawnEntity = Entities.spawnEntity;
+    Entity = Entities.Entity;
 
     addFolder = requireFolder;
     start = start;
