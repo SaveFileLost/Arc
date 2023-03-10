@@ -7,9 +7,4 @@ export type EntityKind = {
     comparer: PubTypes.EntityComparer;
 }
 
-export type Entity = PubTypes.Entity & {
-    parentId: number?;
-    childIds: PubTypes.List<number>;
-}
-
 return nil

@@ -105,10 +105,6 @@ export type ArcCommon = {
 
         spawn: (kind: string) -> Entity;
         delete: (ent: Entity) -> ();
-
-        setParent: (child: Entity, parent: Entity?) -> ();
-        getParent: (ent: Entity) -> ();
-        getChildren: (ent: Entity) -> List<Entity>;
     };
 
     Comparison: Comparison;

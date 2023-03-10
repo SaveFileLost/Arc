@@ -117,8 +117,6 @@ local function processTick()
         snapshot.tick = client.lastSimulatedTick
         snapshot.clientId = client.entity.id
 
-        print(snapshot)
-
         local serializedSnapshot = SnapshotUtils.serialize(snapshot)
         networkRemote:FireClient(player, serializedSnapshot)
     end
@@ -183,11 +181,7 @@ return table.freeze {
 
     Entities = table.freeze {
         spawn = spawnEntity;
-        delete = deleteEntity;
-
-        setParent = Entities.setParent;
-        getParent = Entities.getParent;
-        getChildren = Entities.getChildren;
+        delete = Entities.deleteEntityPublic;
 
         setClientKind = setClientEntityKind;
 
