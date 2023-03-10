@@ -61,7 +61,8 @@ local function spawnEntity(kind: string): PubTypes.Entity
     return entity
 end
 
-local function deleteEntity(ent: PubTypes.Entity)
+local function deleteEntityInternal(ent: PubTypes.Entity)
+    assert(ent, `Tried to deleted nil`)
     assert(ent.active, `Tried to deleted an already deleted entity {ent.id}`)
     
     local entity = entities[ent.id]
@@ -69,6 +70,14 @@ local function deleteEntity(ent: PubTypes.Entity)
 
     entity.active = false
     entities[ent.id] = nil
+end
+
+local function deleteEntity(ent: PubTypes.Entity | number)
+    if typeof(ent) == "number" then
+        ent = entities[ent]
+    end
+
+    deleteEntityInternal(ent :: PubTypes.Entity)
 end
 
 local function deleteEntityPublic(ent: PubTypes.Entity)
@@ -136,6 +145,27 @@ local function getAll(): PubTypes.List<PubTypes.Entity>
     return entList
 end
 
+local function getAllWhere(predicate: PubTypes.EntityPredicate): PubTypes.List<PubTypes.Entity>
+    local entList = {}
+    for _, v in pairs(entities) do
+        if predicate(v) then
+            table.insert(entList, v)
+        end
+    end
+
+    return entList
+end
+
+local function getFirstWhere(predicate: PubTypes.EntityPredicate): PubTypes.Entity?
+    for _, ent in pairs(entities) do
+        if predicate(ent) then
+            return ent
+        end
+    end
+
+    return nil
+end
+
 local function getById(id: number): PubTypes.Entity?
     return entities[id]
 end
@@ -167,5 +197,9 @@ return table.freeze({
     compare = compare;
 
     getAll = getAll;
+
+    getAllWhere = getAllWhere;
+    getFirstWhere = getFirstWhere;
+
     getById = getById;
 })

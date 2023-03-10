@@ -77,11 +77,14 @@ local function processSnapshots()
         for _, entity in ipairs(snapshot.entities) do
             if entity.id == snapshot.clientId then
                 clientEntity = entity
-                continue
             end
 
             Entities.override(entity)
             entity.authority = false
+        end
+
+        for _, id in ipairs(snapshot.deletedEntityIds) do
+            Entities.deleteEntity(id)
         end
 
         reconcile(clientEntity, snapshot.tick)
@@ -165,6 +168,11 @@ return table.freeze({
         delete = Entities.deleteEntityPublic;
 
         Entity = Entities.Entity;
+
+        getAll = Entities.getAll;
+        getAllWhere = Entities.getAllWhere;
+        getFirstWhere = Entities.getFirstWhere;
+        getById = Entities.getById;
     };
 
     Comparison = Comparison;

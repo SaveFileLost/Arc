@@ -17,6 +17,13 @@ local function serialize(snapshot: PubTypes.Snapshot): string
         Entities.serialize(ent, buffer)
     end
 
+    -- deleted entities
+    -- follows the same principle as above
+    buffer:writeUInt(16, #snapshot.deletedEntityIds)
+    for _, id in ipairs(snapshot.deletedEntityIds) do
+        buffer:writeUInt(16, id)
+    end
+
     return buffer:toString()
 end
 
@@ -27,12 +34,19 @@ local function deserialize(str: string): PubTypes.Snapshot
         tick = buffer:readUInt(24);
         clientId = buffer:readUInt(24);
         entities = {};
+        deletedEntityIds = {};
     }
 
     local entityCount = buffer:readUInt(16)
     while entityCount > 0 do
         table.insert(snapshot.entities, Entities.deserialize(buffer))
         entityCount -= 1
+    end
+
+    local deletedEntityCount = buffer:readUInt(16)
+    while deletedEntityCount > 0 do
+        table.insert(snapshot.deletedEntityIds, buffer:readUInt(16))
+        deletedEntityCount -= 1
     end
 
     return snapshot

@@ -66,14 +66,10 @@ local function startServices()
     end
 end
 
-local function spawnEntity(kind: string)
-    -- replicate creation
-    return Entities.spawnEntity(kind)
-end
-
+local deletedEntityIds: PubTypes.List<number> = {}
 local function deleteEntity(ent: PubTypes.Entity)
-    Entities.deleteEntity(ent)
-    -- replicate destruction
+    Entities.deleteEntityPublic(ent)
+    table.insert(deletedEntityIds, ent.id)
 end
 
 local clients = {}
@@ -101,11 +97,15 @@ local function processTick()
     
     local allEntities = Entities.getAll()
 
+    local deletedEntities = deletedEntityIds
+    deletedEntityIds = {} -- we dont wanna clear, we wanna reassign to keep the original intact
+
     -- initialize snapshot
     local snapshot: PubTypes.Snapshot = {
         tick = 0;
         clientId = 0;
         entities = allEntities;
+        deletedEntityIds = deletedEntities
     }
 
     -- Send snapshots
@@ -180,12 +180,17 @@ return table.freeze {
     Controller = Controllers.Controller;
 
     Entities = table.freeze {
-        spawn = spawnEntity;
-        delete = Entities.deleteEntityPublic;
+        spawn = Entities.spawnEntity;
+        delete = deleteEntity;
 
         setClientKind = setClientEntityKind;
 
         Entity = Entities.Entity;
+
+        getAll = Entities.getAll;
+        getAllWhere = Entities.getAllWhere;
+        getFirstWhere = Entities.getFirstWhere;
+        getById = Entities.getById;
     };
 
     Comparison = Comparison;

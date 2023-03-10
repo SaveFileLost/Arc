@@ -19,18 +19,25 @@ local function buildInput(input)
 
     input.camAngleX = camAngleX
     input.camAngleY = camAngleY
+
+    input.mousePressed = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+    input.mouse2Pressed = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
 end
 
 local function writeInput(input, buffer)
     buffer:writeVector3(input.moveDirection)
     buffer:writeFloat64(input.camAngleX)
     buffer:writeFloat64(input.camAngleY)
+    buffer:writeBool(input.mousePressed)
+    buffer:writeBool(input.mouse2Pressed)
 end
 
 local function readInput(input, buffer)
     input.moveDirection = buffer:readVector3()
     input.camAngleX = buffer:readFloat64()
     input.camAngleY = buffer:readFloat64()
+    input.mousePressed = buffer:readBool()
+    input.mouse2Pressed = buffer:readBool()
 end
 
 local function commonSetup()

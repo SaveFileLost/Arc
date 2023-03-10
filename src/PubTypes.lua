@@ -24,6 +24,7 @@ export type EntityInitializer = (ent: Entity) -> ();
 export type EntityWriter = (ent: Entity, buffer: BitBuffer) -> ();
 export type EntityReader = (ent: Entity, buffer: BitBuffer) -> ();
 export type EntityComparer = (ent1: Entity, ent2: Entity) -> boolean;
+export type EntityPredicate = (ent: Entity) -> boolean
 
 export type EntityDefinition = {
     kind: string;
@@ -53,9 +54,13 @@ export type Snapshot = {
     tick: number;
     clientId: number;
     entities: List<Entity>;
+    deletedEntityIds: List<number>;
 }
 
 export type BitBuffer = {
+    writeBool: (self: BitBuffer, b: boolean) -> ();
+    readBool: (self: BitBuffer) -> boolean;
+
     writeUInt: (self: BitBuffer, bitWidth: number, n: number) -> ();
     readUInt: (self: BitBuffer, bitWidth: number) -> number;
 
@@ -105,6 +110,13 @@ export type ArcCommon = {
 
         spawn: (kind: string) -> Entity;
         delete: (ent: Entity) -> ();
+
+        getAll: () -> List<Entity>;
+
+        getAllWhere: (predicate: EntityPredicate) -> List<Entity>;
+        getFirstWhere: (predicate: EntityPredicate) -> Entity?;
+
+        getById: (id: number) -> Entity?;
     };
 
     Comparison: Comparison;
