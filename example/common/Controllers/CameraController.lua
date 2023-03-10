@@ -7,8 +7,8 @@ local function constructCameraCFrame(camAngleX: number, camAngleY: number): CFra
     return CFrame.Angles(0, math.rad(camAngleY), 0) * CFrame.Angles(math.rad(camAngleX), 0, 0)
 end
 
-function CameraController:simulate(playerState, input)
-    playerState.viewCf = constructCameraCFrame(input.camAngleX, input.camAngleY)
+function CameraController:simulate(player, input)
+    player.viewCf = constructCameraCFrame(input.camAngleX, input.camAngleY)
 end
 
 function CameraController:frameSimulate(playerState, input)

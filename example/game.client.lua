@@ -1,3 +1,5 @@
+require(game.ReplicatedStorage.Common.EntityDefinitions)
+
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 local commonSetup = require(game.ReplicatedStorage.Common.commonSetup)
 

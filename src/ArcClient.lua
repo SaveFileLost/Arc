@@ -2,13 +2,15 @@ local RunService = game:GetService("RunService")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local deepCopy = require(script.Parent.Utility.deepCopy)
-local deepIsEqual = require(script.Parent.Utility.deepIsEqual)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
+local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
+local Comparison = require(script.Parent.Utility.Comparison)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
 local Controllers = require(script.Parent.Controllers)
+local Entities = require(script.Parent.Entities)
 local Input = require(script.Parent.Input)
 local PubTypes = require(script.Parent.PubTypes)
 
@@ -19,9 +21,10 @@ local networkRemote: RemoteEvent
 
 local currentTick: number
 local inputBuffer
-local predictedStateBuffer
+local predictedBuffer
+local clientEntityId: number
 
-local playerState = {}
+local playerEntity: PubTypes.Entity
 
 local function getTickRate(): number
     return TICK_RATE
@@ -30,28 +33,30 @@ end
 local function predict(tick: number)
     local input: PubTypes.Input = inputBuffer:get(tick)
 
-    Controllers.simulate(playerState, input)
+    Controllers.simulate(playerEntity, input)
 
-    predictedStateBuffer:set(tick, deepCopy(playerState))
+    predictedBuffer:set(tick, deepCopy(playerEntity))
 end
 
-local function reconcile(serverPlayerState, serverTick)
-    local predictedState = predictedStateBuffer:get(serverTick)
-
-    if predictedState == nil then
-        predictedState = serverPlayerState
+local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
+    local predictedEntity = predictedBuffer:get(serverTick)
+    
+    -- 1. we lagged out past the buffer 2. we dont have the player entity at all yet
+    if predictedEntity == nil then
+        predictedEntity = serverEntity
+        playerEntity = serverEntity
         warn(`Received unpredicted state for tick {serverTick}`)
     end
 
-    if deepIsEqual(predictedState, serverPlayerState) then return end
+    if Entities.compare(predictedEntity, serverEntity) then return end
 
     warn(`Prediction error on tick {serverTick}, reconciling`)
-    warn("Predicted", predictedState, "Server", serverPlayerState)
+    warn("Predicted", predictedEntity, "Server", serverEntity)
     -- would be neat if we could tell what exactly caused the misprediction
 
     -- Initial reconciliation. Correct initial state
-    predictedStateBuffer:set(serverTick, serverPlayerState)
-    playerState = serverPlayerState
+    predictedBuffer:set(serverTick, deepCopy(serverEntity))
+    playerEntity = serverEntity
 
     -- Re-predict everything that was mispredicted as a result of the faulty tick
     local tickToReconcile = serverTick + 1 -- serverTick is initial, we already have the state for it.
@@ -64,8 +69,25 @@ end
 local pendingSnapshots = {}
 local function processSnapshots()
     for _ = #pendingSnapshots, 1, -1 do
-        local snapshot = table.remove(pendingSnapshots, #pendingSnapshots)
-        reconcile(snapshot.state, snapshot.tick)
+        local serializedSnapshot = table.remove(pendingSnapshots, #pendingSnapshots)
+        local snapshot = SnapshotUtils.deserialize(serializedSnapshot)
+        
+        local clientEntity: PubTypes.Entity
+
+        for _, entity in ipairs(snapshot.entities) do
+            if entity.id == snapshot.clientId then
+                clientEntity = entity
+            end
+
+            Entities.override(entity)
+            entity.authority = false
+        end
+
+        for _, id in ipairs(snapshot.deletedEntityIds) do
+            Entities.deleteEntity(id)
+        end
+
+        reconcile(clientEntity, snapshot.tick)
     end
 end
 
@@ -81,6 +103,8 @@ local function processTick()
         Input.getInputWriter()
     )
     networkRemote:FireServer(command)
+
+    if playerEntity == nil then return end
 
     predict(currentTick)
 end
@@ -99,10 +123,8 @@ local function onHeartbeat()
 end
 
 local function onPreRender()
-    local latestState = predictedStateBuffer:latest()
-    if latestState == nil then return end
-
-    Controllers.frameSimulate(latestState, Input.buildInput())
+    if playerEntity == nil then return end
+    Controllers.frameSimulate(playerEntity, Input.buildInput())
 end
 
 local function start()
@@ -114,9 +136,11 @@ local function start()
     TICK_RATE = networkRemote:GetAttribute("TickRate")
     START_TIME = networkRemote:GetAttribute("StartTime")
 
+    Entities.setKindIdentifiersFromJson(networkRemote:GetAttribute("KindIdentifiers"))
+
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
     inputBuffer = PositionalBuffer.new(330) -- Arbitrary number, stores 5 seconds which is good enough
-    predictedStateBuffer = PositionalBuffer.new(330)
+    predictedBuffer = PositionalBuffer.new(330)
 
     Controllers.start()
 
@@ -138,6 +162,20 @@ return table.freeze({
 
     getController = Controllers.getController;
     Controller = Controllers.Controller;
+
+    Entities = table.freeze {
+        spawn = Entities.spawnEntity;
+        delete = Entities.deleteEntityPublic;
+
+        Entity = Entities.Entity;
+
+        getAll = Entities.getAll;
+        getAllWhere = Entities.getAllWhere;
+        getFirstWhere = Entities.getFirstWhere;
+        getById = Entities.getById;
+    };
+
+    Comparison = Comparison;
 
     addFolder = requireFolder;
     start = start;

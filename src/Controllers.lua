@@ -51,15 +51,15 @@ local function start()
     end
 end
 
-local function simulate(playerState: PubTypes.Map<any, any>, input: PubTypes.Input)
+local function simulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
     for _, controller in ipairs(simulatableControllers) do
-        controller:simulate(playerState, input)
+        controller:simulate(playerEntity, input)
     end
 end
 
-local function frameSimulate(playerState: PubTypes.Map<string, any>, input: PubTypes.Input)
+local function frameSimulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
     for _, controller in ipairs(frameSimulatableControllers) do
-        controller:frameSimulate(playerState, input)
+        controller:frameSimulate(playerEntity, input)
     end
 end
 

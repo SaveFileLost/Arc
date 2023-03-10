@@ -11,6 +11,14 @@ function BitBuffer.fromString(str: string)
     return setmetatable({_buffer = RstkBitBuffer.FromString(str)}, BitBuffer)
 end
 
+function BitBuffer:writeBool(b: boolean)
+    self._buffer:WriteBool(b)
+end
+
+function BitBuffer:readBool(): boolean
+    return self._buffer:ReadBool()
+end
+
 function BitBuffer:writeUInt(bitWidth: number, n: number)
     self._buffer:WriteUInt(bitWidth, n)
 end

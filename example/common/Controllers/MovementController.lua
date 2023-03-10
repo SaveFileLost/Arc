@@ -1,15 +1,11 @@
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 
 local MovementController = Arc.Controller "MovementController"
-MovementController.simulationPriority = 0 -- after CameraController
+MovementController.simulationPriority = 1 -- after CameraController
 
-function MovementController:simulate(playerState, input)
-    if playerState.position == nil then
-        playerState.position = Vector3.zero
-    end
-
-    local moveDir = playerState.viewCf:VectorToWorldSpace(input.moveDirection)
-    playerState.position += moveDir
+function MovementController:simulate(player, input)
+    local moveDir = player.viewCf:VectorToWorldSpace(input.moveDirection)
+    player.position += moveDir
 end
 
 return nil
