@@ -2,7 +2,6 @@ local RunService = game:GetService("RunService")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local deepCopy = require(script.Parent.Utility.deepCopy)
-local deepIsEqual = require(script.Parent.Utility.deepIsEqual)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local Comparison = require(script.Parent.Utility.Comparison)
@@ -115,6 +114,8 @@ local function start()
     -- Tickrate and Start time are dictated by the server
     TICK_RATE = networkRemote:GetAttribute("TickRate")
     START_TIME = networkRemote:GetAttribute("StartTime")
+
+    Entities.setKindIdentifiersFromJson(networkRemote:GetAttribute("KindIdentifiers"))
 
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
     inputBuffer = PositionalBuffer.new(330) -- Arbitrary number, stores 5 seconds which is good enough

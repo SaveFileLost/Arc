@@ -1,4 +1,8 @@
+local HttpService = game:GetService("HttpService")
+
 local IS_CLIENT = game:GetService("RunService"):IsClient()
+
+local BitBuffer = require(script.Parent.Classes.BitBuffer)
 
 local PubTypes = require(script.Parent.PubTypes)
 local Types = require(script.Parent.Types)
@@ -6,8 +10,11 @@ local Types = require(script.Parent.Types)
 local entityKinds: PubTypes.Map<string, Types.EntityKind> = {}
 local entities: PubTypes.Map<number, Types.Entity> = {}
 
+local lastKindIdentifier = 0
 local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
+
+    lastKindIdentifier += 1
 
     entityKinds[def.kind] = {
         initializer = def.init;
@@ -112,6 +119,54 @@ local function deleteEntity(ent: PubTypes.Entity)
     entities[ent.id] = nil
 end
 
+-- should only really be called on the server to replicate the correct kind to id correlations
+local function getKindIdentifiersAsJson(): string
+    local identifiers = {}
+    local id = 1
+    for kindName in pairs(entityKinds) do
+        identifiers[id] = kindName
+        id += 1
+    end
+
+    return HttpService:JSONEncode(identifiers)
+end
+
+-- when serializing entities, their kind is serialized as ids, which are 16 bit UInts
+-- the id to kind correlation is specified by the server
+local idToKindMap: PubTypes.Map<number, string> = {}
+local kindToIdMap: PubTypes.Map<string, number> = {}
+local function setKindIdentifiersFromJson(kindIdents: string)
+    idToKindMap = HttpService:JSONDecode(kindIdents)
+    for id, kind in pairs(idToKindMap) do
+        kindToIdMap[kind] = id
+    end
+end
+
+local function serialize(ent: Types.Entity): string
+    local buffer = BitBuffer.new()
+
+    buffer:writeUInt(16, kindToIdMap[ent.kind])
+    -- UInt because we will only ever need to serialize server entities, and they are unsigned
+    buffer:writeUInt(24, ent.id)
+
+    entityKinds[ent.kind].writer(ent, buffer)
+
+    return buffer:toString()
+end
+
+local function deserialize(str: string): PubTypes.Entity
+    local buffer = BitBuffer.fromString(str)
+
+    local kind = idToKindMap[buffer:readUInt(16)]
+    local entity = createEntity(kind)
+
+    entity.id = buffer:readUInt(24)
+
+    entityKinds[kind].reader(entity, buffer)
+
+    return entity
+end
+
 return table.freeze({
     Entity = Entity;
     createEntity = createEntity;
@@ -122,4 +177,9 @@ return table.freeze({
     getParent = getParent;
     setParent = setParent;
     getChildren = getChildren;
+
+    getKindIdentifiersAsJson = getKindIdentifiersAsJson;
+    setKindIdentifiersFromJson = setKindIdentifiersFromJson;
+    serialize = serialize;
+    deserialize = deserialize;
 })

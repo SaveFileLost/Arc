@@ -129,10 +129,14 @@ local function start()
     START_TIME = getTime()
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
 
+    local entityIdentifiers = Entities.getKindIdentifiersAsJson()
+    Entities.setKindIdentifiersFromJson(entityIdentifiers) -- let server know the ids too
+
     networkRemote = Instance.new("RemoteEvent")
     networkRemote.Name = "Network"
     networkRemote:SetAttribute("TickRate", TICK_RATE)
     networkRemote:SetAttribute("StartTime", START_TIME)
+    networkRemote:SetAttribute("KindIdentifiers", entityIdentifiers)
     networkRemote.Parent = script.Parent
 
     startServices()
