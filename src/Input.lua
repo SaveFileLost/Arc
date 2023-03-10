@@ -1,4 +1,3 @@
-local BitBuffer = require(script.Parent.Classes.BitBuffer)
 local PubTypes = require(script.Parent.PubTypes)
 
 local inputBuilder: PubTypes.InputBuilder

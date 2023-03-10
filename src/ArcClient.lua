@@ -63,7 +63,7 @@ end
 
 local pendingSnapshots = {}
 local function processSnapshots()
-    for i = #pendingSnapshots, 1, -1 do
+    for _ = #pendingSnapshots, 1, -1 do
         local snapshot = table.remove(pendingSnapshots, #pendingSnapshots)
         reconcile(snapshot.state, snapshot.tick)
     end
