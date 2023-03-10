@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
+local Comparison = require(script.Parent.Utility.Comparison)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
@@ -174,6 +175,8 @@ return table.freeze {
 
         Entity = Entities.Entity;
     };
+
+    Comparison = Comparison;
 
     addFolder = requireFolder;
     start = start;

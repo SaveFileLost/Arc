@@ -5,6 +5,7 @@ local deepCopy = require(script.Parent.Utility.deepCopy)
 local deepIsEqual = require(script.Parent.Utility.deepIsEqual)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
+local Comparison = require(script.Parent.Utility.Comparison)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
@@ -150,6 +151,8 @@ return table.freeze({
 
         Entity = Entities.Entity;
     };
+
+    Comparison = Comparison;
 
     addFolder = requireFolder;
     start = start;

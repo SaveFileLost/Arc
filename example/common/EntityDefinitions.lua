@@ -5,10 +5,12 @@ Arc.Entities.Entity {
     
     init = function(ent)
         ent.position = Vector3.new(0, 0, 0)
+        ent.viewCf = CFrame.identity;
     end;
 
     write = function(ent, buffer)
         buffer:writeVector3(ent.position)
+        -- viewCf is not serialized as it is constructed from input later
     end;
 
     read = function(ent, buffer)
@@ -16,7 +18,7 @@ Arc.Entities.Entity {
     end;
 
     compare = function(ent1, ent2)
-        return ent1.position:FuzzyEq(ent2, 0.0001)
+        return Arc.Comparison.compareVector3s(ent1.position, ent2.position)
     end;
 }
 

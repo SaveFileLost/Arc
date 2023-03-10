@@ -68,6 +68,12 @@ export type BitBuffer = {
     toString: (self: BitBuffer) -> string;
 }
 
+export type Comparison = {
+    compareFloats: (f1: number, f2: number, maxDiff: number?) -> boolean;
+    compareVector3s: (vec1: Vector3, vec2: Vector3, maxDiff: number?) -> boolean;
+    compareCFrames: (cf1: CFrame, cf2: CFrame, maxDiff: number?) -> boolean;
+}
+
 export type Input = Map<string, any>
 export type InputBuilder = (input: Input) -> Input
 export type InputWriter = (input: Input, buffer: BitBuffer) -> ()
@@ -98,6 +104,8 @@ export type ArcCommon = {
         getParent: (ent: Entity) -> ();
         getChildren: (ent: Entity) -> List<Entity>;
     };
+
+    Comparison: Comparison;
 
     addFolder: (folder: Folder) -> ();
 
