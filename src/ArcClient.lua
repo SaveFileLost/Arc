@@ -140,8 +140,16 @@ return table.freeze({
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    spawnEntity = Entities.spawnEntity;
-    Entity = Entities.Entity;
+    Entities = table.freeze {
+        spawn = Entities.spawnEntity;
+        delete = Entities.deleteEntity;
+
+        setParent = Entities.setParent;
+        getParent = Entities.getParent;
+        getChildren = Entities.getChildren;
+
+        Entity = Entities.Entity;
+    };
 
     addFolder = requireFolder;
     start = start;

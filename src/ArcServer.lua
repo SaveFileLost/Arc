@@ -28,9 +28,9 @@ local function setTickRate(rate: number)
     TICK_RATE = rate
 end
 
-local clientEntityKind: string
-local function setClientKind(entityKind: string)
-    clientEntityKind = entityKind
+local CLIENT_ENTITY_KIND: string
+local function setClientEntityKind(kind: string)
+    CLIENT_ENTITY_KIND = kind
 end
 
 local function getService(name: string): PubTypes.Service
@@ -63,6 +63,16 @@ local function startServices()
     end
 end
 
+local function spawnEntity(kind: string)
+    -- replicate creation
+    return Entities.spawnEntity(kind)
+end
+
+local function deleteEntity(ent: PubTypes.Entity)
+    Entities.deleteEntity(ent)
+    -- replicate destruction
+end
+
 local clients = {}
 
 local function receiveCommand(sender: Player, serializedCommand)
@@ -73,7 +83,7 @@ local function receiveCommand(sender: Player, serializedCommand)
 end
 
 local function onPlayerJoined(player: Player)
-    clients[player] = Client.new(player)
+    clients[player] = Client.new(player, Entities.spawnEntity(CLIENT_ENTITY_KIND))
 end
 
 local function onPlayerLeft(player: Player)
@@ -111,6 +121,8 @@ end
 
 local function start()
     assert(TICK_RATE ~= nil, "Tickrate not set")
+    assert(CLIENT_ENTITY_KIND ~= nil, "Client entity kind not set")
+
     Input.checkSetup()
 
     START_TIME = getTime()
@@ -131,13 +143,12 @@ local function start()
     RunService.Heartbeat:Connect(onHeartbeat)
 end
 
-return table.freeze({
+return table.freeze {
     IS_SERVER = RunService:IsServer();
     IS_CLIENT = RunService:IsClient();
 
     getTickRate = getTickRate;
     setTickRate = setTickRate;
-    setClientKind = setClientKind;
 
     getTime = getTime;
     
@@ -151,9 +162,19 @@ return table.freeze({
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    spawnEntity = Entities.spawnEntity;
-    Entity = Entities.Entity;
+    Entities = table.freeze {
+        spawn = spawnEntity;
+        delete = deleteEntity;
+
+        setParent = Entities.setParent;
+        getParent = Entities.getParent;
+        getChildren = Entities.getChildren;
+
+        setClientKind = setClientEntityKind;
+
+        Entity = Entities.Entity;
+    };
 
     addFolder = requireFolder;
     start = start;
-})
+}

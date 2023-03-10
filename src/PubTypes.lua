@@ -16,8 +16,8 @@ export type Controller = {
     init: (self: Controller) -> ();
     start: (self: Controller) -> ();
 
-    simulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
-    frameSimulate: (self: Controller, playerState: Map<string, any>, input: Input) -> ();
+    simulate: (self: Controller, entity: Entity, input: Input) -> ();
+    frameSimulate: (self: Controller, entity: Entity, input: Input) -> ();
 }
 
 export type EntityInitializer = (ent: Entity) -> ();
@@ -37,6 +37,10 @@ export type EntityDefinition = {
 export type Entity = {
     kind: string;
     id: number;
+
+    active: boolean;
+    authority: boolean; -- did we create this entity?
+
     [string]: any;
 }
 
@@ -83,8 +87,17 @@ export type ArcCommon = {
     getController: (name: string) -> Controller;
     Controller: (name: string) -> Controller;
 
-    spawnEntity: (kind: string) -> Entity;
-    Entity: (def: EntityDefinition) -> ();
+    Entities: {
+        Entity: (def: EntityDefinition) -> ();
+        setClientKind: (kind: string) -> ();
+
+        spawn: (kind: string) -> Entity;
+        delete: (ent: Entity) -> ();
+
+        setParent: (child: Entity, parent: Entity?) -> ();
+        getParent: (ent: Entity) -> ();
+        getChildren: (ent: Entity) -> List<Entity>;
+    };
 
     addFolder: (folder: Folder) -> ();
 

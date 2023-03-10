@@ -1,6 +1,6 @@
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 
-Arc.Entity {
+Arc.Entities.Entity {
     kind = "Player";
     
     init = function(ent)

@@ -1,13 +1,14 @@
 local Controllers = require(script.Parent.Parent.Controllers)
+local PubTypes = require(script.Parent.Parent.PubTypes)
 
 local Client = {}
 Client.__index = Client
 
-function Client.new(player: Player)
+function Client.new(player: Player, entity: PubTypes.Entity)
     return setmetatable({
         player = player;
 
-        state = {};
+		entity = entity;
         _pendingCommands = {};
         lastSimulatedTick = nil; -- Initialized in processCommands
         nextExpectedTick = nil; -- Initialized in pushCommand
@@ -18,7 +19,7 @@ function Client:processCommands()
     for i = #self._pendingCommands, 1, -1 do
 		local command = table.remove(self._pendingCommands, i)
 		
-		Controllers.simulate(self.state, command.input)
+		Controllers.simulate(self.entity, command.input)
 		
 		self.lastSimulatedTick = command.tick
 	end
