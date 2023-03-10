@@ -4,6 +4,7 @@ local requireFolder = require(script.Parent.Utility.requireFolder)
 local deepCopy = require(script.Parent.Utility.deepCopy)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
+local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
 local Comparison = require(script.Parent.Utility.Comparison)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
@@ -65,7 +66,9 @@ end
 local pendingSnapshots = {}
 local function processSnapshots()
     for _ = #pendingSnapshots, 1, -1 do
-        local snapshot = table.remove(pendingSnapshots, #pendingSnapshots)
+        local serializedSnapshot = table.remove(pendingSnapshots, #pendingSnapshots)
+        local snapshot = SnapshotUtils.deserialize(serializedSnapshot)
+        print(snapshot, true)
         reconcile(snapshot.state, snapshot.tick)
     end
 end

@@ -99,7 +99,6 @@ local function processTick()
         client:processCommands()
     end
     
-    -- copy the entity map
     local allEntities = Entities.getAll()
 
     -- initialize snapshot
@@ -117,6 +116,8 @@ local function processTick()
         --personalize snapshot for this client
         snapshot.tick = client.lastSimulatedTick
         snapshot.clientId = client.entity.id
+
+        print(snapshot)
 
         local serializedSnapshot = SnapshotUtils.serialize(snapshot)
         networkRemote:FireClient(player, serializedSnapshot)

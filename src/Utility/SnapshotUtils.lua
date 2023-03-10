@@ -13,6 +13,7 @@ local function serialize(snapshot: PubTypes.Snapshot): string
     -- 16 bit uint max value is 65535, no way anybody is going to have more entities at once than that
     -- this value represents the amount of entities
     buffer:writeUInt(16, #snapshot.entities)
+    print(#snapshot.entities)
     for _, ent in ipairs(snapshot.entities) do
         Entities.serialize(ent, buffer)
     end
@@ -26,11 +27,13 @@ local function deserialize(str: string): PubTypes.Snapshot
     local snapshot = {
         tick = buffer:readUInt(24);
         clientId = buffer:readUInt(24);
-        entities = table.create(buffer:readUInt(16));
+        entities = {};
     }
 
-    for i in ipairs(snapshot.entities) do
-        snapshot.entities[i] = Entities.deserialize(buffer)
+    local entityCount = buffer:readUInt(16)
+    while entityCount > 0 do
+        table.insert(snapshot.entities, Entities.deserialize(buffer))
+        entityCount -= 1
     end
 
     return snapshot
