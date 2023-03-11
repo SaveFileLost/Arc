@@ -10,11 +10,8 @@ local Types = require(script.Parent.Types)
 local entityKinds: PubTypes.Map<string, Types.EntityKind> = {}
 local entities: PubTypes.Map<number, PubTypes.Entity> = {}
 
-local lastKindIdentifier = 0
 local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
-
-    lastKindIdentifier += 1
 
     entityKinds[def.kind] = {
         initializer = def.init;
@@ -108,14 +105,12 @@ local function setKindIdentifiersFromJson(kindIdents: string)
     end
 end
 
-local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer): string
+local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer)
     buffer:writeUInt(16, kindToIdMap[ent.kind])
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
 
     entityKinds[ent.kind].writer(ent, buffer)
-
-    return buffer:toString()
 end
 
 local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity

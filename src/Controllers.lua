@@ -1,6 +1,12 @@
 local TableReserver = require(script.Parent.Classes.TableReserver)
 
+local Rpc = require(script.Parent.Rpc)
 local PubTypes = require(script.Parent.PubTypes)
+
+local clientRpcCallFunction
+local function setClientRpcCallFunction(func)
+    clientRpcCallFunction = func
+end
 
 local controllerReserver = TableReserver.new()
 local controllerMap: PubTypes.Map<string, PubTypes.Controller> = {}
@@ -13,8 +19,23 @@ local function Controller(name: string): PubTypes.Controller
     local controller = controllerReserver:getOrReserve(name)
     controller.name = name
 
-    controller.init = function() end
-    controller.start = function() end
+    function controller:init() end
+    function controller:start() end
+    
+    function controller:bindClientRpc(rpcName: string)
+        local method = self[rpcName]
+        assert(method ~= nil, `No corresponding method on Controller for rpc {rpcName}`)
+
+        Rpc.bindCallback(rpcName, function(...)
+            method(self, ...)
+        end)
+
+        -- replace method with function that calls rpc
+        self[rpcName] = function(self, targets, ...)
+            assert(typeof(targets) == "table", `Rpc targets must be a Player set`)
+            clientRpcCallFunction(rpcName, targets, ...)
+        end
+    end
 
     controllerMap[name] = controller
     return controller
@@ -55,6 +76,12 @@ local function simulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
     for _, controller in ipairs(simulatableControllers) do
         controller:simulate(playerEntity, input)
     end
+
+    -- culling wasnt resumed, the user forgor
+    if not Rpc.isCulling() then
+        warn("You forgor to resume culling dingleberry")
+        Rpc.forceResumeCulling()
+    end
 end
 
 local function frameSimulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
@@ -71,4 +98,6 @@ return table.freeze({
 
     simulate = simulate;
     frameSimulate = frameSimulate;
+
+    setClientRpcCallFunction = setClientRpcCallFunction;
 })

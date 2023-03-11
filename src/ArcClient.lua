@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local deepCopy = require(script.Parent.Utility.deepCopy)
@@ -12,6 +13,7 @@ local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 local Controllers = require(script.Parent.Controllers)
 local Entities = require(script.Parent.Entities)
 local Input = require(script.Parent.Input)
+local Rpc = require(script.Parent.Rpc)
 local PubTypes = require(script.Parent.PubTypes)
 
 local TICK_RATE: number
@@ -22,7 +24,6 @@ local networkRemote: RemoteEvent
 local currentTick: number
 local inputBuffer
 local predictedBuffer
-local clientEntityId: number
 
 local playerEntity: PubTypes.Entity
 
@@ -30,12 +31,17 @@ local function getTickRate(): number
     return TICK_RATE
 end
 
+local isPredicting = false
 local function predict(tick: number)
+    isPredicting = true
+
     local input: PubTypes.Input = inputBuffer:get(tick)
 
     Controllers.simulate(playerEntity, input)
 
     predictedBuffer:set(tick, deepCopy(playerEntity))
+
+    isPredicting = false
 end
 
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
@@ -83,12 +89,23 @@ local function processSnapshots()
             entity.authority = false
         end
 
+        -- delete entities the server deleted
         for _, id in ipairs(snapshot.deletedEntityIds) do
             Entities.deleteEntity(id)
         end
 
+        -- run rpcs the server sent
+        for _, rpcCall in ipairs(snapshot.rpcs) do
+            Rpc.runCallback(rpcCall.name, table.unpack(rpcCall.args))
+        end
+
         reconcile(clientEntity, snapshot.tick)
     end
+end
+
+local pendingServerRpcs = {}
+local function callServerRpc(rpcName: string, ...: any)
+    table.insert(pendingServerRpcs, Rpc.makeServerCall(rpcName, ...))
 end
 
 local function processTick()
@@ -97,16 +114,19 @@ local function processTick()
     local input = Input.buildInput()
     inputBuffer:set(currentTick, input)
 
+    if playerEntity ~= nil then
+        predict(currentTick)
+    end
+
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
         input,
-        Input.getInputWriter()
+        Input.getInputWriter(),
+        pendingServerRpcs
     )
     networkRemote:FireServer(command)
 
-    if playerEntity == nil then return end
-
-    predict(currentTick)
+    table.clear(pendingServerRpcs)
 end
 
 local function onNetworkReceive(snapshot)
@@ -137,6 +157,7 @@ local function start()
     START_TIME = networkRemote:GetAttribute("StartTime")
 
     Entities.setKindIdentifiersFromJson(networkRemote:GetAttribute("KindIdentifiers"))
+    Rpc.setRpcIdentifiersFromJson(networkRemote:GetAttribute("RpcIdentifiers"))
 
     currentTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
     inputBuffer = PositionalBuffer.new(330) -- Arbitrary number, stores 5 seconds which is good enough
@@ -148,6 +169,18 @@ local function start()
     RunService.Heartbeat:Connect(onHeartbeat)
     RunService.PreRender:Connect(onPreRender)
 end
+
+local function callClientRpc(rpcName: string, targets: PubTypes.Set<Player>, ...: any)
+    assert(isPredicting, `Can't call client Rpc on client outside of simulate`)
+    
+    if (not targets[Players.LocalPlayer] and targets ~= Rpc.EVERYONE) or not Rpc.isCulling() then
+        return
+    end
+
+    Rpc.runCallback(rpcName, ...)
+end
+-- i DO NOT like this
+Controllers.setClientRpcCallFunction(callClientRpc)
 
 return table.freeze({
     IS_SERVER = RunService:IsServer();
@@ -173,6 +206,21 @@ return table.freeze({
         getAllWhere = Entities.getAllWhere;
         getFirstWhere = Entities.getFirstWhere;
         getById = Entities.getById;
+    };
+
+    Rpc = table.freeze {
+        EVERYONE = Rpc.EVERYONE;
+        
+        Client = Rpc.Client;
+        Server = Rpc.Server;
+        bindCallback = Rpc.bindCallback;
+
+        callClient = callClientRpc;
+        callServer = callServerRpc;
+
+        pauseCulling = Rpc.pauseCulling;
+        resumeCulling = Rpc.resumeCulling;
+        isCulling = Rpc.isCulling;
     };
 
     Comparison = Comparison;

@@ -1,4 +1,5 @@
 local Entities = require(script.Parent.Parent.Entities)
+local Rpc = require(script.Parent.Parent.Rpc)
 
 local BitBuffer = require(script.Parent.Parent.Classes.BitBuffer)
 
@@ -24,6 +25,13 @@ local function serialize(snapshot: PubTypes.Snapshot): string
         buffer:writeUInt(16, id)
     end
 
+    -- sent client rpcs
+    -- guess what? follows the same principle.
+    buffer:writeUInt(16, #snapshot.rpcs)
+    for _, call in ipairs(snapshot.rpcs) do
+        Rpc.serialize(call, buffer)
+    end
+
     return buffer:toString()
 end
 
@@ -35,6 +43,7 @@ local function deserialize(str: string): PubTypes.Snapshot
         clientId = buffer:readUInt(24);
         entities = {};
         deletedEntityIds = {};
+        rpcs = {};
     }
 
     local entityCount = buffer:readUInt(16)
@@ -47,6 +56,12 @@ local function deserialize(str: string): PubTypes.Snapshot
     while deletedEntityCount > 0 do
         table.insert(snapshot.deletedEntityIds, buffer:readUInt(16))
         deletedEntityCount -= 1
+    end
+
+    local rpcCount = buffer:readUInt(16)
+    while rpcCount > 0 do
+        table.insert(snapshot.rpcs, Rpc.deserialize(buffer))
+        rpcCount -= 1
     end
 
     return snapshot

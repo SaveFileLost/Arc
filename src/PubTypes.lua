@@ -7,6 +7,8 @@ export type Service = {
     
     init: (self: Service) -> ();
     start: (self: Service) -> ();
+
+    bindServrRpc: (self: Controller, name: string) -> ();
 }
 
 export type Controller = {
@@ -18,6 +20,8 @@ export type Controller = {
 
     simulate: (self: Controller, entity: Entity, input: Input) -> ();
     frameSimulate: (self: Controller, entity: Entity, input: Input) -> ();
+
+    bindClientRpc: (self: Controller, name: string) -> ();
 }
 
 export type EntityInitializer = (ent: Entity) -> ();
@@ -48,6 +52,7 @@ export type Entity = {
 export type Command = {
     tick: number;
     input: Input;
+    serverRpcs: List<RpcCall>;
 }
 
 export type Snapshot = {
@@ -55,6 +60,33 @@ export type Snapshot = {
     clientId: number;
     entities: List<Entity>;
     deletedEntityIds: List<number>;
+    rpcs: List<RpcCall>;
+}
+
+export type RpcWriter = (buffer: BitBuffer, ...any) -> ()
+export type RpcReader = (buffer: BitBuffer) -> (...any)
+export type RpcCallback = (...any) -> ()
+
+export type RpcDefinition = {
+    name: string;
+    write: RpcWriter;
+    read: RpcReader;
+}
+
+export type PendingClientRpc = {
+    name: string;
+    targets: Set<Player>;
+    args: List<any>;
+}
+
+export type PendingServerRpc = {
+    name: string;
+    args: List<any>;
+}
+
+export type RpcCall = {
+    name: string;
+    args: List<any>;
 }
 
 export type BitBuffer = {
@@ -117,6 +149,20 @@ export type ArcCommon = {
         getFirstWhere: (predicate: EntityPredicate) -> Entity?;
 
         getById: (id: number) -> Entity?;
+    };
+
+    Rpc: {
+        EVERYONE: Set<Player>;
+
+        Client: (def: RpcDefinition) -> ();
+        Server: (def: RpcDefinition) -> ();
+        bindCallback: (rpcName: string, callback: RpcCallback) -> ();
+        callClient: (rpcName: string, targets: Set<Player>, ...any) -> ();
+        callServer: (rpcName: string, ...any) -> ();
+
+        pauseCulling: () -> ();
+        resumeCulling: () -> ();
+        isCulling: () -> boolean;
     };
 
     Comparison: Comparison;
