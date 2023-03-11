@@ -1,6 +1,12 @@
 local TableReserver = require(script.Parent.Classes.TableReserver)
 
+local Rpc = require(script.Parent.Rpc)
 local PubTypes = require(script.Parent.PubTypes)
+
+local rpcCallFunction
+local function setRpcCallFunction(func)
+    rpcCallFunction = func
+end
 
 local controllerReserver = TableReserver.new()
 local controllerMap: PubTypes.Map<string, PubTypes.Controller> = {}
@@ -13,8 +19,23 @@ local function Controller(name: string): PubTypes.Controller
     local controller = controllerReserver:getOrReserve(name)
     controller.name = name
 
-    controller.init = function() end
-    controller.start = function() end
+    function controller:init() end
+    function controller:start() end
+    
+    function controller:bindRpc(rpcName: string)
+        local method = self[rpcName]
+        assert(method ~= nil, `No corresponding method on Controller for rpc {rpcName}`)
+
+        Rpc.bindCallback(rpcName, function(...)
+            method(self, ...)
+        end)
+
+        -- replace method with function that calls rpc
+        self[rpcName] = function(self, targets, ...)
+            assert(typeof(targets) == "table", `Rpc targets must be a Player set`)
+            rpcCallFunction(rpcName, targets, ...)
+        end
+    end
 
     controllerMap[name] = controller
     return controller
@@ -71,4 +92,6 @@ return table.freeze({
 
     simulate = simulate;
     frameSimulate = frameSimulate;
+
+    setRpcCallFunction = setRpcCallFunction;
 })

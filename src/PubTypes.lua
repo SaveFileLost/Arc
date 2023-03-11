@@ -18,6 +18,8 @@ export type Controller = {
 
     simulate: (self: Controller, entity: Entity, input: Input) -> ();
     frameSimulate: (self: Controller, entity: Entity, input: Input) -> ();
+
+    bindRpc: (self: Controller, name: string) -> ();
 }
 
 export type EntityInitializer = (ent: Entity) -> ();
@@ -55,6 +57,28 @@ export type Snapshot = {
     clientId: number;
     entities: List<Entity>;
     deletedEntityIds: List<number>;
+    rpcs: List<ClientRpcCall>;
+}
+
+export type RpcWriter = (buffer: BitBuffer, ...any) -> ()
+export type RpcReader = (buffer: BitBuffer) -> (...any)
+export type RpcCallback = (...any) -> ()
+
+export type RpcDefinition = {
+    name: string;
+    write: RpcWriter;
+    read: RpcReader;
+}
+
+export type PendingRpc = {
+    name: string;
+    targets: Set<Player>;
+    args: List<any>;
+}
+
+export type ClientRpcCall = {
+    name: string;
+    args: List<any>;
 }
 
 export type BitBuffer = {
@@ -117,6 +141,18 @@ export type ArcCommon = {
         getFirstWhere: (predicate: EntityPredicate) -> Entity?;
 
         getById: (id: number) -> Entity?;
+    };
+
+    Rpc: {
+        EVERYONE: Set<Player>;
+
+        Client: (def: RpcDefinition) -> ();
+        bindCallback: (rpcName: string, callback: RpcCallback) -> ();
+        callClient: (rpcName: string, targets: Set<Player>, ...any) -> ();
+
+        pauseCulling: () -> ();
+        resumeCulling: () -> ();
+        isCulling: () -> boolean;
     };
 
     Comparison: Comparison;

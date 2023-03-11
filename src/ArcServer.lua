@@ -14,7 +14,11 @@ local Client = require(script.Parent.Classes.Client)
 local Controllers = require(script.Parent.Controllers)
 local Entities = require(script.Parent.Entities)
 local Input = require(script.Parent.Input)
+local Rpc = require(script.Parent.Rpc)
 local PubTypes = require(script.Parent.PubTypes)
+
+local IS_SERVER = RunService:IsServer()
+local IS_CLIENT = RunService:IsClient()
 
 local TICK_RATE: number
 local START_TIME: number
@@ -89,23 +93,48 @@ local function onPlayerLeft(player: Player)
     clients[player] = nil
 end
 
-local function processTick()
-    -- Simulate
+local isCurrentlySimulating = false
+local currentSimulatingPlayer: Player?
+local function simulateClients()
+    isCurrentlySimulating = true
     for _, client in pairs(clients) do
+        currentSimulatingPlayer = client.player
         client:processCommands()
     end
-    
-    local allEntities = Entities.getAll()
 
-    local deletedEntities = deletedEntityIds
-    deletedEntityIds = {} -- we dont wanna clear, we wanna reassign to keep the original intact
+    currentSimulatingPlayer = nil
+    isCurrentlySimulating = false
+end
+
+local pendingRpcs = {}
+local function callClientRpc(rpcName: string, targets: PubTypes.Set<Player>, ...: any)
+    if targets == Rpc.EVERYONE then
+        targets = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            targets[plr] = true
+        end
+    end
+    
+    -- cull for caller if simulating
+    if isCurrentlySimulating and currentSimulatingPlayer and Rpc.isCulling() then
+        targets[currentSimulatingPlayer] = nil
+    end
+
+    table.insert(pendingRpcs, Rpc.makeClientCall(rpcName, targets, ...))
+end
+-- i DO NOT like this
+Controllers.setRpcCallFunction(callClientRpc)
+
+local function sendSnapshots()
+    local allEntities = Entities.getAll()
 
     -- initialize snapshot
     local snapshot: PubTypes.Snapshot = {
         tick = 0;
         clientId = 0;
         entities = allEntities;
-        deletedEntityIds = deletedEntities
+        deletedEntityIds = deletedEntityIds;
+        rpcs = {};
     }
 
     -- Send snapshots
@@ -116,10 +145,28 @@ local function processTick()
         --personalize snapshot for this client
         snapshot.tick = client.lastSimulatedTick
         snapshot.clientId = client.entity.id
+        snapshot.rpcs = {}
+
+        -- personalize rpcs
+        for _, rpc in ipairs(pendingRpcs) do
+            if not rpc.targets[player] then continue end
+            table.insert(snapshot.rpcs, {
+                name = rpc.name;
+                args = rpc.args;
+            })
+        end
 
         local serializedSnapshot = SnapshotUtils.serialize(snapshot)
         networkRemote:FireClient(player, serializedSnapshot)
     end
+
+    table.clear(pendingRpcs)
+    table.clear(deletedEntityIds)
+end
+
+local function processTick()
+    simulateClients()
+    sendSnapshots()
 end
 
 local currentTick: number
@@ -144,11 +191,15 @@ local function start()
     local entityIdentifiers = Entities.getKindIdentifiersAsJson()
     Entities.setKindIdentifiersFromJson(entityIdentifiers) -- let server know the ids too
 
+    local rpcIdentifiers = Rpc.getRpcIdentifiersAsJson()
+    Rpc.setRpcIdentifiersFromJson(rpcIdentifiers) -- let server know the ids too
+
     networkRemote = Instance.new("RemoteEvent")
     networkRemote.Name = "Network"
     networkRemote:SetAttribute("TickRate", TICK_RATE)
     networkRemote:SetAttribute("StartTime", START_TIME)
     networkRemote:SetAttribute("KindIdentifiers", entityIdentifiers)
+    networkRemote:SetAttribute("RpcIdentifiers", rpcIdentifiers)
     networkRemote.Parent = script.Parent
 
     startServices()
@@ -161,8 +212,8 @@ local function start()
 end
 
 return table.freeze {
-    IS_SERVER = RunService:IsServer();
-    IS_CLIENT = RunService:IsClient();
+    IS_SERVER = IS_SERVER;
+    IS_CLIENT = IS_CLIENT;
 
     getTickRate = getTickRate;
     setTickRate = setTickRate;
@@ -191,6 +242,19 @@ return table.freeze {
         getAllWhere = Entities.getAllWhere;
         getFirstWhere = Entities.getFirstWhere;
         getById = Entities.getById;
+    };
+
+    Rpc = table.freeze {
+        EVERYONE = Rpc.EVERYONE;
+        
+        Client = Rpc.Client;
+        bindCallback = Rpc.bindCallback;
+
+        callClient = callClientRpc;
+
+        pauseCulling = Rpc.pauseCulling;
+        resumeCulling = Rpc.resumeCulling;
+        isCulling = Rpc.isCulling;
     };
 
     Comparison = Comparison;

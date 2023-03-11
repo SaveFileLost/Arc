@@ -7,4 +7,11 @@ export type EntityKind = {
     comparer: PubTypes.EntityComparer;
 }
 
+export type Rpc = {
+    isServerRpc: boolean;
+    callback: PubTypes.RpcCallback?;
+    writer: PubTypes.RpcWriter;
+    reader: PubTypes.RpcReader;
+}
+
 return nil
