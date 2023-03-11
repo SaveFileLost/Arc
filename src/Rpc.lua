@@ -20,6 +20,16 @@ local function ClientRpc(def: PubTypes.RpcDefinition)
     }
 end
 
+local function ServerRpc(def: PubTypes.RpcDefinition)
+    assert(rpcs[def.name] == nil, `Rpc with name {def.name} already exists`)
+
+    rpcs[def.name] = {
+        isServerRpc = true;
+        writer = def.write;
+        reader = def.read;
+    }
+end
+
 local function bindCallback(rpcName: string, callback: PubTypes.RpcCallback)
     local rpc = rpcs[rpcName]
     assert(rpc, `Rpc {rpcName} does not exist`)
@@ -51,7 +61,7 @@ local function forceResumeCulling()
     table.clear(cullPauseStack)
 end
 
-local function makeClientCall(rpcName: string, targets: PubTypes.Set<Player>, ...: any): PubTypes.PendingRpc
+local function makeClientCall(rpcName: string, targets: PubTypes.Set<Player>, ...: any): PubTypes.PendingClientRpc
     local rpc = rpcs[rpcName]
     assert(rpc, `Rpc {rpcName} does not exist`)
     assert(not rpc.isServerRpc, `Rpc {rpcName} is a ServerRpc`)
@@ -69,15 +79,22 @@ local function makeClientCall(rpcName: string, targets: PubTypes.Set<Player>, ..
     }
 end
 
+local function makeServerCall(rpcName: string, ...: any): PubTypes.PendingServerRpc
+    local rpc = rpcs[rpcName]
+    assert(rpc, `Rpc {rpcName} does not exist`)
+    assert(rpc.isServerRpc, `Rpc {rpcName} is a ClientRpc`)
+
+    return {
+        name = rpcName;
+        args = {...};
+    }
+end
+
 local function runCallback(rpcName: string, ...: any)
     local rpc = rpcs[rpcName]
     assert(rpc, `Rpc {rpcName} does not exist`)
 
     rpc.callback(...)
-end
-
-local function callServer(rpcName: string, ...: any)
-    error("Server rpcs are not yet implemented")
 end
 
 -- should only really be called on the server to replicate the correct rpc to id correlations
@@ -102,15 +119,14 @@ local function setRpcIdentifiersFromJson(kindIdents: string)
     end
 end
 
-local function serialize(call: PubTypes.ClientRpcCall, buffer: PubTypes.BitBuffer)
+local function serialize(call: PubTypes.RpcCall, buffer: PubTypes.BitBuffer)
     local rpc = rpcs[call.name]
     buffer:writeUInt(16, rpcToIdMap[call.name])
     rpc.writer(buffer, table.unpack(call.args))
 end
 
-local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.ClientRpcCall
+local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.RpcCall
     local rpcName = idToRpcMap[buffer:readUInt(16)]
-    print(rpcName)
     local rpc = rpcs[rpcName]
 
     local args = {rpc.reader(buffer)}
@@ -124,6 +140,7 @@ return table.freeze {
     EVERYONE = EVERYONE;
 
     Client = ClientRpc;
+    Server = ServerRpc;
     bindCallback = bindCallback;
     runCallback = runCallback;
 
@@ -133,7 +150,7 @@ return table.freeze {
     forceResumeCulling = forceResumeCulling;
 
     makeClientCall = makeClientCall;
-    callServer = callServer;
+    makeServerCall = makeServerCall;
 
     serialize = serialize;
     deserialize = deserialize;

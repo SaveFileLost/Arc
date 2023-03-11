@@ -24,7 +24,6 @@ local networkRemote: RemoteEvent
 local currentTick: number
 local inputBuffer
 local predictedBuffer
-local clientEntityId: number
 
 local playerEntity: PubTypes.Entity
 
@@ -104,22 +103,30 @@ local function processSnapshots()
     end
 end
 
+local pendingServerRpcs = {}
+local function callServerRpc(rpcName: string, ...: any)
+    table.insert(pendingServerRpcs, Rpc.makeServerCall(rpcName, ...))
+end
+
 local function processTick()
     processSnapshots()
     
     local input = Input.buildInput()
     inputBuffer:set(currentTick, input)
 
+    if playerEntity ~= nil then
+        predict(currentTick)
+    end
+
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
         input,
-        Input.getInputWriter()
+        Input.getInputWriter(),
+        pendingServerRpcs
     )
     networkRemote:FireServer(command)
 
-    if playerEntity == nil then return end
-
-    predict(currentTick)
+    table.clear(pendingServerRpcs)
 end
 
 local function onNetworkReceive(snapshot)
@@ -173,7 +180,7 @@ local function callClientRpc(rpcName: string, targets: PubTypes.Set<Player>, ...
     Rpc.runCallback(rpcName, ...)
 end
 -- i DO NOT like this
-Controllers.setRpcCallFunction(callClientRpc)
+Controllers.setClientRpcCallFunction(callClientRpc)
 
 return table.freeze({
     IS_SERVER = RunService:IsServer();
@@ -205,9 +212,11 @@ return table.freeze({
         EVERYONE = Rpc.EVERYONE;
         
         Client = Rpc.Client;
+        Server = Rpc.Server;
         bindCallback = Rpc.bindCallback;
 
         callClient = callClientRpc;
+        callServer = callServerRpc;
 
         pauseCulling = Rpc.pauseCulling;
         resumeCulling = Rpc.resumeCulling;

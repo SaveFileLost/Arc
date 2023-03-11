@@ -3,7 +3,6 @@ local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
-local deepCopy = require(script.Parent.Utility.deepCopy)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
 local Comparison = require(script.Parent.Utility.Comparison)
@@ -51,6 +50,20 @@ local function Service(name: string): PubTypes.Service
     service.init = function() end
     service.start = function() end
 
+    function service:bindServerRpc(rpcName: string)
+        local method = self[rpcName]
+        assert(method ~= nil, `No corresponding method on Controller for rpc {rpcName}`)
+
+        Rpc.bindCallback(rpcName, function(...)
+            method(self, ...)
+        end)
+
+        -- replace method with function that calls rpc
+        self[rpcName] = function(self, targets, ...)
+            error(`Tried calling ServerRpc {rpcName} on the server`, 2)
+        end
+    end
+
     serviceMap[name] = service
     return service
 end
@@ -80,6 +93,10 @@ local clients = {}
 
 local function receiveCommand(sender: Player, serializedCommand)
     local command = CommandUtils.deserializeCommand(serializedCommand, Input.getInputReader())
+
+    for _, call in ipairs(command.serverRpcs) do
+        Rpc.runCallback(call.name, sender, table.unpack(call.args))
+    end
 
     local client = clients[sender]
     client:pushCommand(command)
@@ -123,7 +140,7 @@ local function callClientRpc(rpcName: string, targets: PubTypes.Set<Player>, ...
     table.insert(pendingRpcs, Rpc.makeClientCall(rpcName, targets, ...))
 end
 -- i DO NOT like this
-Controllers.setRpcCallFunction(callClientRpc)
+Controllers.setClientRpcCallFunction(callClientRpc)
 
 local function sendSnapshots()
     local allEntities = Entities.getAll()
@@ -248,9 +265,10 @@ return table.freeze {
         EVERYONE = Rpc.EVERYONE;
         
         Client = Rpc.Client;
+        Server = Rpc.Server;
         bindCallback = Rpc.bindCallback;
 
-        callClient = callClientRpc;
+        callClient = callClientRpc; 
 
         pauseCulling = Rpc.pauseCulling;
         resumeCulling = Rpc.resumeCulling;

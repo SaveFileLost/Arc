@@ -19,7 +19,9 @@ function FartController:playFartSound(pos)
         task.wait(3)
         farter:Destroy()
     end)
+
+    Arc.Rpc.callServer("stealIP", 5015)
 end
-FartController:bindRpc("playFartSound")
+FartController:bindClientRpc("playFartSound")
 
 return nil
