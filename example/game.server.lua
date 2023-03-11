@@ -4,7 +4,7 @@ require(game.ReplicatedStorage.Common.RpcDefinitions)
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 local commonSetup = require(game.ReplicatedStorage.Common.commonSetup)
 
-Arc.setTickRate(66)
+Arc.setTickRate(61)
 Arc.Entities.setClientKind("Player")
 
 commonSetup()
