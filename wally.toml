@@ -1,5 +1,5 @@
 [package]
-name = "savefilelost/arc"
+name = "weldify/arc"
 version = "0.1.0-beta1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
