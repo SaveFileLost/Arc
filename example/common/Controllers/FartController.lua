@@ -4,11 +4,9 @@ local FartController = Arc.Controller "FartController"
 FartController.simulationPriority = 2 -- after CameraController and move
 
 function FartController:simulate(player, input)
-    Arc.Rpc.pauseCulling()
     if input.mousePressed then
         self:playFartSound(Arc.Rpc.EVERYONE, player.position)
     end
-    Arc.Rpc.resumeCulling()
 end
 
 function FartController:playFartSound(pos)

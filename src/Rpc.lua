@@ -33,7 +33,7 @@ end
 
 local cullPauseStack: PubTypes.List<string> = {}
 local function pauseCulling()
-    table.insert(cullPauseStack, 1, debug.traceback())
+    table.insert(cullPauseStack, 1, debug.traceback("Pause traceback", 2))
 end
 
 local function resumeCulling()

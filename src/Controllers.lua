@@ -76,6 +76,12 @@ local function simulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
     for _, controller in ipairs(simulatableControllers) do
         controller:simulate(playerEntity, input)
     end
+
+    -- culling wasnt resumed, the user forgor
+    if not Rpc.isCulling() then
+        warn("You forgor to resume culling dingleberry")
+        Rpc.forceResumeCulling()
+    end
 end
 
 local function frameSimulate(playerEntity: PubTypes.Entity, input: PubTypes.Input)
