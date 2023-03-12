@@ -3,10 +3,11 @@ local Rpc = require(script.Parent.Parent.Rpc)
 local PubTypes = require(script.Parent.Parent.PubTypes)
 
 local function generateSerializedCommand(
-    tick: number, input: PubTypes.Input, writeInput: PubTypes.InputWriter, serverRpcs: PubTypes.List<PubTypes.RpcCall>
+    tick: number, requestFullSnapshot: boolean, input: PubTypes.Input, writeInput: PubTypes.InputWriter, serverRpcs: PubTypes.List<PubTypes.RpcCall>
 ): string
     local buffer = BitBuffer.new()
     buffer:writeUInt(24, tick) -- encode tick as 24 bit integer, which is enough to keep the server running for 176 days at 66 tickrate
+    buffer:writeBool(requestFullSnapshot)
     writeInput(input, buffer) -- serialize input
 
     buffer:writeUInt(16, #serverRpcs)
@@ -21,6 +22,7 @@ local function deserializeCommand(str: string, readInput: PubTypes.InputReader):
     local buffer = BitBuffer.fromString(str)
     
     local tick = buffer:readUInt(24)
+    local requestFullSnapshot = buffer:readBool()
 
     local input = {}
     readInput(input, buffer) -- deserialize input
@@ -34,6 +36,7 @@ local function deserializeCommand(str: string, readInput: PubTypes.InputReader):
 
     return {
         tick = tick;
+        requestFullSnapshot = requestFullSnapshot;
         input = input;
         serverRpcs = serverRpcs;
     }

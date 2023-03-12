@@ -120,6 +120,7 @@ local function processTick()
 
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
+        false,
         input,
         Input.getInputWriter(),
         pendingServerRpcs

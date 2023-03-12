@@ -56,6 +56,7 @@ export type Entity = {
 
 export type Command = {
     tick: number;
+    requestFullSnapshot: boolean;
     input: Input;
     serverRpcs: List<RpcCall>;
 }
