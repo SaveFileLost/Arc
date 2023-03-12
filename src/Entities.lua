@@ -21,7 +21,7 @@ local function Entity(def: PubTypes.EntityDefinition)
 end
 
 -- this creates and inits an entity
-local function createEntity(kind: string, skipInitializer: boolean?): PubTypes.Entity
+local function createEntity(kind: string): PubTypes.Entity
     local entKind = entityKinds[kind]
     assert(entKind ~= nil, `Entity kind {kind} does not exist`)
 
@@ -31,12 +31,6 @@ local function createEntity(kind: string, skipInitializer: boolean?): PubTypes.E
         active = true;
         authority = true;
     }
-
-    -- we dont want to initialize in certain scenarios
-    -- for example when a server entity is replicated to the client
-    if not skipInitializer then
-        entKind.initializer(entity)
-    end
     
     return entity
 end
@@ -45,6 +39,9 @@ local lastClientId = 0
 local lastServerId = 0
 -- this spawns the entity into the world and is exposed via the api
 local function spawnEntity(kind: string): PubTypes.Entity
+    local entKind = entityKinds[kind]
+    assert(entKind ~= nil, `Entity kind {kind} does not exist`)
+
     local entity = createEntity(kind)
     
     if IS_CLIENT then
@@ -55,6 +52,8 @@ local function spawnEntity(kind: string): PubTypes.Entity
         lastServerId += 1
         entity.id = lastServerId
     end
+
+    entKind.initializer(entity)
 
     entities[entity.id] = entity
 
@@ -121,8 +120,7 @@ end
 
 local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
     local kindName = idToKindMap[buffer:readUInt(16)]
-    local entity = createEntity(kindName, true)
-
+    local entity = createEntity(kindName)
     entity.id = buffer:readUInt(24)
 
     local kind = entityKinds[entity.kind]
