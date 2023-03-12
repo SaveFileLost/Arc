@@ -44,6 +44,7 @@ local function predict(tick: number)
     isPredicting = false
 end
 
+local recentPredictionErrors = 0 -- used to request for full snapshot if things go south
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
     local predictedEntity = predictedBuffer:get(serverTick)
     
@@ -56,6 +57,7 @@ local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
 
     if Entities.areSimilar(predictedEntity, serverEntity) then return end
 
+    recentPredictionErrors += 1
     warn(`Prediction error on tick {serverTick}, reconciling`)
     warn("Predicted", predictedEntity, "Server", serverEntity)
     -- would be neat if we could tell what exactly caused the misprediction
@@ -109,6 +111,8 @@ local function callServerRpc(rpcName: string, ...: any)
 end
 
 local function processTick()
+    recentPredictionErrors = math.max(0, recentPredictionErrors - 1)
+
     processSnapshots()
     
     local input = Input.buildInput()
@@ -120,7 +124,7 @@ local function processTick()
 
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
-        false,
+        recentPredictionErrors > 20, -- request full snapshot
         input,
         Input.getInputWriter(),
         pendingServerRpcs
