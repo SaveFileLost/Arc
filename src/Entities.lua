@@ -14,10 +14,9 @@ local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
 
     entityKinds[def.kind] = {
+        netProperties = def.netProperties;
+
         initializer = def.init;
-        writer = def.write;
-        reader = def.read;
-        comparer = def.compare;
     }
 end
 
@@ -110,25 +109,38 @@ local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer)
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
 
-    entityKinds[ent.kind].writer(ent, buffer)
+    local kind = entityKinds[ent.kind]
+    for propName, netProp in pairs(kind.netProperties) do
+        netProp.write(ent[propName], buffer)
+    end
 end
 
 local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
-    local kind = idToKindMap[buffer:readUInt(16)]
-    local entity = createEntity(kind)
+    local kindName = idToKindMap[buffer:readUInt(16)]
+    local entity = createEntity(kindName)
 
     entity.id = buffer:readUInt(24)
 
-    entityKinds[kind].reader(entity, buffer)
+    local kind = entityKinds[entity.kind]
+    for propName, netProp in pairs(kind.netProperties) do
+        entity[propName] = netProp.read(buffer)
+    end
 
     return entity
 end
 
-local function compare(entity1: PubTypes.Entity, entity2: PubTypes.Entity)
+local function areSimilar(entity1: PubTypes.Entity, entity2: PubTypes.Entity)
     assert(entity1.kind == entity2.kind, "Tried comparing 2 entities of different kinds")
     local entKind = entityKinds[entity1.kind]
     
-    return entKind.comparer(entity1, entity2)
+    for propName, netProp in pairs(entKind.netProperties) do
+        local prop1, prop2 = entity1[propName], entity2[propName]
+        if not netProp.areSimilar(prop1, prop2) then
+            return false
+        end
+    end
+
+    return true
 end
 
 local function getAll(): PubTypes.List<PubTypes.Entity>
@@ -189,7 +201,7 @@ return table.freeze({
     setKindIdentifiersFromJson = setKindIdentifiersFromJson;
     serialize = serialize;
     deserialize = deserialize;
-    compare = compare;
+    areSimilar = areSimilar;
 
     getAll = getAll;
 

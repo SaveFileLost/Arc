@@ -6,7 +6,7 @@ local deepCopy = require(script.Parent.Utility.deepCopy)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
-local Comparison = require(script.Parent.Utility.Comparison)
+local Similar = require(script.Parent.Similar)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
@@ -54,7 +54,7 @@ local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
         warn(`Received unpredicted state for tick {serverTick}`)
     end
 
-    if Entities.compare(predictedEntity, serverEntity) then return end
+    if Entities.areSimilar(predictedEntity, serverEntity) then return end
 
     warn(`Prediction error on tick {serverTick}, reconciling`)
     warn("Predicted", predictedEntity, "Server", serverEntity)
@@ -182,7 +182,7 @@ end
 -- i DO NOT like this
 Controllers.setClientRpcCallFunction(callClientRpc)
 
-return table.freeze({
+local ArcClient: PubTypes.ArcClient = {
     IS_SERVER = RunService:IsServer();
     IS_CLIENT = RunService:IsClient();
 
@@ -196,35 +196,34 @@ return table.freeze({
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    Entities = table.freeze {
-        spawn = Entities.spawnEntity;
-        delete = Entities.deleteEntityPublic;
+    Entity = Entities.Entity;
+    spawnEntity = Entities.spawnEntity;
+    deleteEntity = Entities.deleteEntityPublic;
 
-        Entity = Entities.Entity;
+    getAllEntities = Entities.getAll;
+    getAllEntitiesWhere = Entities.getAllWhere;
+    getFirstEntityWhere = Entities.getFirstWhere;
+    getEntityById = Entities.getById;
 
-        getAll = Entities.getAll;
-        getAllWhere = Entities.getAllWhere;
-        getFirstWhere = Entities.getFirstWhere;
-        getById = Entities.getById;
-    };
-
-    Rpc = table.freeze {
-        EVERYONE = Rpc.EVERYONE;
+    RPC_EVERYONE = Rpc.EVERYONE;
         
-        Client = Rpc.Client;
-        Server = Rpc.Server;
-        bindCallback = Rpc.bindCallback;
+    ClientRpc = Rpc.Client;
+    ServerRpc = Rpc.Server;
+    bindRpcCallback = Rpc.bindCallback;
 
-        callClient = callClientRpc;
-        callServer = callServerRpc;
+    callClientRpc = callClientRpc;
+    callServerRpc = callServerRpc;
 
-        pauseCulling = Rpc.pauseCulling;
-        resumeCulling = Rpc.resumeCulling;
-        isCulling = Rpc.isCulling;
-    };
+    pauseRpcCulling = Rpc.pauseCulling;
+    resumeRpcCulling = Rpc.resumeCulling;
+    isRpcCulling = Rpc.isCulling;
 
-    Comparison = Comparison;
+    NetVector3 = require(script.Parent.Net.NetVector3);
+
+    Similar = Similar;
 
     addFolder = requireFolder;
     start = start;
-})
+}
+
+return table.freeze(ArcClient)

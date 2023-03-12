@@ -1,10 +1,8 @@
 local PubTypes = require(script.Parent.PubTypes)
 
 export type EntityKind = {
+    netProperties: PubTypes.Map<string, PubTypes.NetProperty>;
     initializer: PubTypes.EntityInitializer;
-    writer: PubTypes.EntityWriter;
-    reader: PubTypes.EntityReader;
-    comparer: PubTypes.EntityComparer;
 }
 
 export type Rpc = {

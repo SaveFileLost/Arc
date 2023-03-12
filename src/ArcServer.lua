@@ -5,7 +5,7 @@ local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
-local Comparison = require(script.Parent.Utility.Comparison)
+local Similar = require(script.Parent.Similar)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
@@ -228,7 +228,7 @@ local function start()
     RunService.Heartbeat:Connect(onHeartbeat)
 end
 
-return table.freeze {
+local ArcServer: PubTypes.ArcServer = {
     IS_SERVER = IS_SERVER;
     IS_CLIENT = IS_CLIENT;
 
@@ -247,36 +247,35 @@ return table.freeze {
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    Entities = table.freeze {
-        spawn = Entities.spawnEntity;
-        delete = deleteEntity;
+    Entity = Entities.Entity;
+    spawnEntity = Entities.spawnEntity;
+    deleteEntity = deleteEntity;
 
-        setClientKind = setClientEntityKind;
+    setClientEntityKind = setClientEntityKind;
 
-        Entity = Entities.Entity;
+    getAllEntities = Entities.getAll;
+    getAllEntitiesWhere = Entities.getAllWhere;
+    getFirstEntityWhere = Entities.getFirstWhere;
+    getEntityById = Entities.getById;
 
-        getAll = Entities.getAll;
-        getAllWhere = Entities.getAllWhere;
-        getFirstWhere = Entities.getFirstWhere;
-        getById = Entities.getById;
-    };
-
-    Rpc = table.freeze {
-        EVERYONE = Rpc.EVERYONE;
+    RPC_EVERYONE = Rpc.EVERYONE;
         
-        Client = Rpc.Client;
-        Server = Rpc.Server;
-        bindCallback = Rpc.bindCallback;
+    ClientRpc = Rpc.Client;
+    ServerRpc = Rpc.Server;
+    bindRpcCallback = Rpc.bindCallback;
 
-        callClient = callClientRpc; 
+    callClientRpc = callClientRpc; 
 
-        pauseCulling = Rpc.pauseCulling;
-        resumeCulling = Rpc.resumeCulling;
-        isCulling = Rpc.isCulling;
-    };
+    pauseRpcCulling = Rpc.pauseCulling;
+    resumeRpcCulling = Rpc.resumeCulling;
+    isRpcCulling = Rpc.isCulling;
 
-    Comparison = Comparison;
+    NetVector3 = require(script.Parent.Net.NetVector3);
+
+    Similar = Similar;
 
     addFolder = requireFolder;
     start = start;
 }
+
+return table.freeze(ArcServer)
