@@ -164,6 +164,10 @@ local function sendSnapshots()
         snapshot.clientId = client.entity.id
         snapshot.rpcs = {}
 
+        if client.grantFullSnapshot then
+            print("client requested full snapshot and we agreed")
+        end
+
         -- personalize rpcs
         for _, rpc in ipairs(pendingRpcs) do
             if not rpc.targets[player] then continue end

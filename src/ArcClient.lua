@@ -110,6 +110,9 @@ local function callServerRpc(rpcName: string, ...: any)
     table.insert(pendingServerRpcs, Rpc.makeServerCall(rpcName, ...))
 end
 
+-- we just joined, we want to ask for full snapshot
+local requestedFirstSnapshot = false
+
 local function processTick()
     recentPredictionErrors = math.max(0, recentPredictionErrors - 1)
 
@@ -124,12 +127,14 @@ local function processTick()
 
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
-        recentPredictionErrors > 20, -- request full snapshot
+        recentPredictionErrors > 20 or not requestedFirstSnapshot, -- request full snapshot
         input,
         Input.getInputWriter(),
         pendingServerRpcs
     )
     networkRemote:FireServer(command)
+
+    requestedFirstSnapshot = true
 
     table.clear(pendingServerRpcs)
 end
