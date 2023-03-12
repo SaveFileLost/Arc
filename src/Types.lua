@@ -12,4 +12,10 @@ export type Rpc = {
     reader: PubTypes.RpcReader;
 }
 
+export type SimilarityMismatch = {
+    propName: string;
+    value1: any;
+    value2: any;
+}
+
 return nil

@@ -21,7 +21,7 @@ local function Entity(def: PubTypes.EntityDefinition)
 end
 
 -- this creates and inits an entity
-local function createEntity(kind: string): PubTypes.Entity
+local function createEntity(kind: string, skipInitializer: boolean?): PubTypes.Entity
     local entKind = entityKinds[kind]
     assert(entKind ~= nil, `Entity kind {kind} does not exist`)
 
@@ -32,8 +32,12 @@ local function createEntity(kind: string): PubTypes.Entity
         authority = true;
     }
 
-    entKind.initializer(entity)
-
+    -- we dont want to initialize in certain scenarios
+    -- for example when a server entity is replicated to the client
+    if not skipInitializer then
+        entKind.initializer(entity)
+    end
+    
     return entity
 end
 
@@ -117,7 +121,7 @@ end
 
 local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
     local kindName = idToKindMap[buffer:readUInt(16)]
-    local entity = createEntity(kindName)
+    local entity = createEntity(kindName, true)
 
     entity.id = buffer:readUInt(24)
 
@@ -129,14 +133,14 @@ local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
     return entity
 end
 
-local function areSimilar(entity1: PubTypes.Entity, entity2: PubTypes.Entity)
+local function areSimilar(entity1: PubTypes.Entity, entity2: PubTypes.Entity): (boolean, Types.SimilarityMismatch?)
     assert(entity1.kind == entity2.kind, "Tried comparing 2 entities of different kinds")
     local entKind = entityKinds[entity1.kind]
     
     for propName, netProp in pairs(entKind.netProperties) do
         local prop1, prop2 = entity1[propName], entity2[propName]
         if not netProp.areSimilar(prop1, prop2) then
-            return false
+            return false, {propName = propName; value1 = prop1; value2 = prop2; }
         end
     end
 
@@ -188,6 +192,23 @@ local function override(entity: PubTypes.Entity)
     entities[entity.id] = entity
 end
 
+local function merge(entity: PubTypes.Entity)
+    local intoEntity = entities[entity.id]
+
+    -- entity we want to merge into doesnt exist, create from this
+    if intoEntity == nil then
+        entities[entity.id] = entity
+        return entity
+    end
+
+    for k, v in pairs(entity) do
+        print("merged",k,v)
+        intoEntity[k] = v
+    end
+
+    return intoEntity
+end
+
 return table.freeze({
     Entity = Entity;
     createEntity = createEntity;
@@ -196,6 +217,7 @@ return table.freeze({
     deleteEntity = deleteEntity;
     deleteEntityPublic = deleteEntityPublic;
     override = override;
+    merge = merge;
 
     getKindIdentifiersAsJson = getKindIdentifiersAsJson;
     setKindIdentifiersFromJson = setKindIdentifiersFromJson;

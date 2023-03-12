@@ -25,13 +25,14 @@ local currentTick: number
 local inputBuffer
 local predictedBuffer
 
-local playerEntity: PubTypes.Entity
-
 local function getTickRate(): number
     return TICK_RATE
 end
 
+
+local playerEntity: PubTypes.Entity
 local isPredicting = false
+
 local function predict(tick: number)
     isPredicting = true
 
@@ -47,19 +48,26 @@ end
 local recentPredictionErrors = 0 -- used to request for full snapshot if things go south
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
     local predictedEntity = predictedBuffer:get(serverTick)
-    
+
     -- 1. we lagged out past the buffer 2. we dont have the player entity at all yet
     if predictedEntity == nil then
+        -- deep copy here because serverEntity is an actual entity in the world
+        -- so we dont want to reference it
+        serverEntity = deepCopy(serverEntity)
+
         predictedEntity = serverEntity
         playerEntity = serverEntity
         warn(`Received unpredicted state for tick {serverTick}`)
     end
 
-    if Entities.areSimilar(predictedEntity, serverEntity) then return end
+    local areSimilar, mismatchReason = Entities.areSimilar(predictedEntity, serverEntity)
+    if areSimilar then return end
 
     recentPredictionErrors += 1
     warn(`Prediction error on tick {serverTick}, reconciling`)
-    warn("Predicted", predictedEntity, "Server", serverEntity)
+    warn(`  ->{predictedEntity.kind}[{predictedEntity.id}].{mismatchReason.propName}`)
+    warn(`  ->predicted {mismatchReason.value1}`)
+    warn(`  ->received {mismatchReason.value2}`)
     -- would be neat if we could tell what exactly caused the misprediction
 
     -- Initial reconciliation. Correct initial state
@@ -80,16 +88,17 @@ local function processSnapshots()
         local serializedSnapshot = table.remove(pendingSnapshots, #pendingSnapshots)
         local snapshot = SnapshotUtils.deserialize(serializedSnapshot)
         
-        local clientEntity: PubTypes.Entity
+        local clientEntity: PubTypes.Entity = playerEntity
 
-        for _, entity in ipairs(snapshot.entities) do
+        for _, entityData in ipairs(snapshot.entities) do
+            local entity = Entities.merge(entityData)
+            entity.authority = false
+
+            -- this is our pawn
+            -- even though its set above, the server could still have changed it
             if entity.id == snapshot.clientId then
-                predictedBuffer:clear()
                 clientEntity = entity
             end
-
-            Entities.override(entity)
-            entity.authority = false
         end
 
         -- delete entities the server deleted
