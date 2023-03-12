@@ -15,7 +15,7 @@ local function serialize(snapshot: PubTypes.Snapshot): string
     -- this value represents the amount of entities
     buffer:writeUInt(16, #snapshot.entities)
     for _, ent in ipairs(snapshot.entities) do
-        Entities.serialize(ent, buffer)
+        Entities.serialize(ent, buffer, {})
     end
 
     -- deleted entities

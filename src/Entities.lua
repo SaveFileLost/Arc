@@ -13,8 +13,23 @@ local entities: PubTypes.Map<number, PubTypes.Entity> = {}
 local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
 
+    -- for serialization / deserialization
+    -- lets us represent properties as uints
+    local netPropertyIdToName = {}
+    local netPropertyNameToId = {}
+    local netPropertyId = 0
+    for propName in pairs(def.netProperties) do
+        netPropertyId += 1
+
+        netPropertyIdToName[netPropertyId] = propName
+        netPropertyNameToId[propName] = netPropertyId
+    end
+
     entityKinds[def.kind] = {
         netProperties = def.netProperties;
+        netPropertyCount = netPropertyId; -- total amount of net properties
+        netPropertyIdToName = netPropertyIdToName;
+        netPropertyNameToId = netPropertyNameToId;
 
         initializer = def.init;
     }
@@ -107,13 +122,21 @@ local function setKindIdentifiersFromJson(kindIdents: string)
     end
 end
 
-local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer)
+local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer, excludeProps: PubTypes.List<string>)
     buffer:writeUInt(16, kindToIdMap[ent.kind])
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
 
     local kind = entityKinds[ent.kind]
+    -- how many properties we are replicating
+    buffer:writeUInt(8, kind.netPropertyCount - #excludeProps)
+
     for propName, netProp in pairs(kind.netProperties) do
+        if table.find(excludeProps, propName) then continue end
+
+        -- write property identifier to let us distinguish properties when deserializing
+        buffer:writeUInt(8, kind.netPropertyNameToId[propName])
+
         netProp.write(ent[propName], buffer)
     end
 end
@@ -123,9 +146,16 @@ local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
     local entity = createEntity(kindName)
     entity.id = buffer:readUInt(24)
 
-    local kind = entityKinds[entity.kind]
-    for propName, netProp in pairs(kind.netProperties) do
-        entity[propName] = netProp.read(buffer)
+    local kind = entityKinds[kindName]
+
+    -- how many properties we received
+    local propertiesRemaining = buffer:readUInt(8)
+    while propertiesRemaining > 0 do
+        -- convert id to property name
+        local netPropName = kind.netPropertyIdToName[buffer:readUInt(8)]
+
+        entity[netPropName] = kind.netProperties[netPropName].read(buffer)
+        propertiesRemaining -= 1
     end
 
     return entity
