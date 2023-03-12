@@ -84,6 +84,7 @@ local function processSnapshots()
 
         for _, entity in ipairs(snapshot.entities) do
             if entity.id == snapshot.clientId then
+                predictedBuffer:clear()
                 clientEntity = entity
             end
 
