@@ -2,22 +2,39 @@ local HttpService = game:GetService("HttpService")
 
 local IS_CLIENT = game:GetService("RunService"):IsClient()
 
-local BitBuffer = require(script.Parent.Classes.BitBuffer)
-
 local PubTypes = require(script.Parent.PubTypes)
 local Types = require(script.Parent.Types)
 
 local entityKinds: PubTypes.Map<string, Types.EntityKind> = {}
 local entities: PubTypes.Map<number, PubTypes.Entity> = {}
 
+local function emptyFunc() end
+
 local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
 
+    -- for serialization / deserialization
+    -- lets us represent properties as uints
+    local netPropertyIdToName = {}
+    local netPropertyNameToId = {}
+    local netPropertyId = 0
+    for propName in pairs(def.netProperties) do
+        netPropertyId += 1
+
+        netPropertyIdToName[netPropertyId] = propName
+        netPropertyNameToId[propName] = netPropertyId
+    end
+
     entityKinds[def.kind] = {
+        netProperties = def.netProperties;
+        netPropertyIdToName = netPropertyIdToName;
+        netPropertyNameToId = netPropertyNameToId;
+
         initializer = def.init;
-        writer = def.write;
-        reader = def.read;
-        comparer = def.compare;
+        cleanup = emptyFunc;
+
+        clientSpawn = emptyFunc;
+        clientDelete = emptyFunc;
     }
 end
 
@@ -32,9 +49,7 @@ local function createEntity(kind: string): PubTypes.Entity
         active = true;
         authority = true;
     }
-
-    entKind.initializer(entity)
-
+    
     return entity
 end
 
@@ -42,6 +57,9 @@ local lastClientId = 0
 local lastServerId = 0
 -- this spawns the entity into the world and is exposed via the api
 local function spawnEntity(kind: string): PubTypes.Entity
+    local entKind = entityKinds[kind]
+    assert(entKind ~= nil, `Entity kind {kind} does not exist`)
+
     local entity = createEntity(kind)
     
     if IS_CLIENT then
@@ -52,6 +70,8 @@ local function spawnEntity(kind: string): PubTypes.Entity
         lastServerId += 1
         entity.id = lastServerId
     end
+
+    entKind.initializer(entity)
 
     entities[entity.id] = entity
 
@@ -64,6 +84,10 @@ local function deleteEntityInternal(ent: PubTypes.Entity)
     
     local entity = entities[ent.id]
     assert(entity ~= nil, `Tried to remove non existent entity {ent.id}`)
+
+    if entity.authority then
+        entityKinds[ent.kind].cleanup(ent)
+    end
 
     entity.active = false
     entities[ent.id] = nil
@@ -110,25 +134,88 @@ local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer)
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
 
-    entityKinds[ent.kind].writer(ent, buffer)
+    local kind = entityKinds[ent.kind]
+
+    -- how many net properties this entity has set
+    local netPropertyCount = 0
+    for propName in pairs(kind.netProperties) do
+        -- if its nil, its not replicated
+        if ent[propName] == nil then continue end
+        netPropertyCount += 1
+    end
+
+    -- how many properties we are replicating
+    buffer:writeUInt(8, netPropertyCount)
+
+    for propName, netProp in pairs(kind.netProperties) do
+        if ent[propName] == nil then continue end
+
+        -- write property identifier to let us distinguish properties when deserializing
+        buffer:writeUInt(8, kind.netPropertyNameToId[propName])
+
+        netProp.write(ent[propName], buffer)
+    end
 end
 
 local function deserialize(buffer: PubTypes.BitBuffer): PubTypes.Entity
-    local kind = idToKindMap[buffer:readUInt(16)]
-    local entity = createEntity(kind)
-
+    local kindName = idToKindMap[buffer:readUInt(16)]
+    local entity = createEntity(kindName)
     entity.id = buffer:readUInt(24)
 
-    entityKinds[kind].reader(entity, buffer)
+    local kind = entityKinds[kindName]
+
+    -- how many properties we received
+    local propertiesRemaining = buffer:readUInt(8)
+    while propertiesRemaining > 0 do
+        -- convert id to property name
+        local netPropName = kind.netPropertyIdToName[buffer:readUInt(8)]
+
+        entity[netPropName] = kind.netProperties[netPropName].read(buffer)
+        propertiesRemaining -= 1
+    end
 
     return entity
 end
 
-local function compare(entity1: PubTypes.Entity, entity2: PubTypes.Entity)
+local function areSimilar(entity1: PubTypes.Entity, entity2: PubTypes.Entity): (boolean, Types.SimilarityMismatch?)
     assert(entity1.kind == entity2.kind, "Tried comparing 2 entities of different kinds")
     local entKind = entityKinds[entity1.kind]
     
-    return entKind.comparer(entity1, entity2)
+    for propName, netProp in pairs(entKind.netProperties) do
+        local prop1, prop2 = entity1[propName], entity2[propName]
+        if not netProp.areSimilar(prop1, prop2) then
+            return false, {propName = propName; value1 = prop1; value2 = prop2; }
+        end
+    end
+
+    return true
+end
+
+-- return an entity with only the net properties that have changed
+-- used for delta compression
+local function netDeltaIntersection(current: PubTypes.Entity, old: PubTypes.Entity): (PubTypes.Entity, boolean)
+    assert(current.kind == current.kind, "Tried getting difference for 2 entities of different kinds")
+    local entKind = entityKinds[current.kind]
+    
+    local diff: PubTypes.Entity = {
+        kind = current.kind;
+        id = current.id;
+        authority = current.authority;
+        active = current.active;
+    }
+
+    local diffCount = 0
+    for propName, netProp in pairs(entKind.netProperties) do
+        local prop1 = current[propName]
+        local prop2 = old[propName]
+        if not netProp.areSimilar(prop1, prop2) then
+            diff[propName] = prop1
+            diffCount += 1
+        end
+    end
+
+    -- return the diff, fullySimilar
+    return diff, diffCount == 0
 end
 
 local function getAll(): PubTypes.List<PubTypes.Entity>
@@ -138,6 +225,10 @@ local function getAll(): PubTypes.List<PubTypes.Entity>
     end
 
     return entList
+end
+
+local function getAllMap(): PubTypes.Map<number, PubTypes.Entity>
+    return table.clone(entities)
 end
 
 local function getAllWhere(predicate: PubTypes.EntityPredicate): PubTypes.List<PubTypes.Entity>
@@ -165,6 +256,10 @@ local function getById(id: number): PubTypes.Entity?
     return entities[id]
 end
 
+local function getKind(kind: string): Types.EntityKind
+    return entityKinds[kind]
+end
+
 -- overrides entity with the same id
 local function override(entity: PubTypes.Entity)
     local oldEnt = entities[entity.id]
@@ -176,6 +271,22 @@ local function override(entity: PubTypes.Entity)
     entities[entity.id] = entity
 end
 
+local function merge(entity: PubTypes.Entity): (PubTypes.Entity, boolean)
+    local intoEntity = entities[entity.id]
+
+    -- entity we want to merge into doesnt exist, create from this
+    if intoEntity == nil then
+        entities[entity.id] = entity
+        return entity, false
+    end
+
+    for k, v in pairs(entity) do
+        intoEntity[k] = v
+    end
+
+    return intoEntity, true
+end
+
 return table.freeze({
     Entity = Entity;
     createEntity = createEntity;
@@ -184,17 +295,21 @@ return table.freeze({
     deleteEntity = deleteEntity;
     deleteEntityPublic = deleteEntityPublic;
     override = override;
+    merge = merge;
 
     getKindIdentifiersAsJson = getKindIdentifiersAsJson;
     setKindIdentifiersFromJson = setKindIdentifiersFromJson;
     serialize = serialize;
     deserialize = deserialize;
-    compare = compare;
+    areSimilar = areSimilar;
+    netDeltaIntersection = netDeltaIntersection;
 
     getAll = getAll;
+    getAllMap = getAllMap;
 
     getAllWhere = getAllWhere;
     getFirstWhere = getFirstWhere;
 
     getById = getById;
+    getKind = getKind;
 })
