@@ -1,4 +1,4 @@
-local Arc = require(game.ReplicatedStorage.Packages.arc)
+local Arc = require(game.ReplicatedStorage.Packages.arc).server()
 
 local SomeService = Arc.Service "SomeService"
 

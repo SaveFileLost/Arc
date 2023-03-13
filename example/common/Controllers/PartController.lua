@@ -1,4 +1,4 @@
-local Arc = require(game.ReplicatedStorage.Packages.arc)
+local Arc = require(game.ReplicatedStorage.Packages.arc).common()
 
 local PartController = Arc.Controller "PartController"
 PartController.simulationPriority = 2 -- after CameraController and move

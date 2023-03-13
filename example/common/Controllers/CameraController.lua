@@ -1,4 +1,4 @@
-local Arc = require(game.ReplicatedStorage.Packages.arc)
+local Arc = require(game.ReplicatedStorage.Packages.arc).common()
 
 local CameraController = Arc.Controller "CameraController"
 CameraController.simulationPriority = 0

@@ -1,7 +1,7 @@
 require(game.ReplicatedStorage.Common.EntityDefinitions)
 require(game.ReplicatedStorage.Common.RpcDefinitions)
 
-local Arc = require(game.ReplicatedStorage.Packages.arc)
+local Arc = require(game.ReplicatedStorage.Packages.arc).server()
 local commonSetup = require(game.ReplicatedStorage.Common.commonSetup)
 
 Arc.setTickRate(61)

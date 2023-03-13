@@ -9,6 +9,8 @@ export type Service = {
     start: (self: Service) -> ();
 
     bindServrRpc: (self: Controller, name: string) -> ();
+
+    [any]: any;
 }
 
 export type Controller = {
@@ -22,6 +24,8 @@ export type Controller = {
     frameSimulate: (self: Controller, entity: Entity, input: Input) -> ();
 
     bindClientRpc: (self: Controller, name: string) -> ();
+
+    [any]: any;
 }
 
 export type NetProperty = {
