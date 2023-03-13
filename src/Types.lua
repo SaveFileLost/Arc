@@ -1,10 +1,11 @@
 local PubTypes = require(script.Parent.PubTypes)
 
 export type EntityKind = {
+    netProperties: PubTypes.Map<string, PubTypes.NetProperty>;
+    netPropertyIdToName: PubTypes.Map<number, string>;
+    netPropertyNameToId: PubTypes.Map<string, number>;
+
     initializer: PubTypes.EntityInitializer;
-    writer: PubTypes.EntityWriter;
-    reader: PubTypes.EntityReader;
-    comparer: PubTypes.EntityComparer;
 }
 
 export type Rpc = {
@@ -12,6 +13,12 @@ export type Rpc = {
     callback: PubTypes.RpcCallback?;
     writer: PubTypes.RpcWriter;
     reader: PubTypes.RpcReader;
+}
+
+export type SimilarityMismatch = {
+    propName: string;
+    value1: any;
+    value2: any;
 }
 
 return nil

@@ -6,7 +6,7 @@ local deepCopy = require(script.Parent.Utility.deepCopy)
 local getTime = require(script.Parent.Utility.getTime)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
-local Comparison = require(script.Parent.Utility.Comparison)
+local Similar = require(script.Parent.Similar)
 
 local PositionalBuffer = require(script.Parent.Classes.PositionalBuffer)
 
@@ -25,13 +25,14 @@ local currentTick: number
 local inputBuffer
 local predictedBuffer
 
-local playerEntity: PubTypes.Entity
-
 local function getTickRate(): number
     return TICK_RATE
 end
 
+
+local playerEntity: PubTypes.Entity
 local isPredicting = false
+
 local function predict(tick: number)
     isPredicting = true
 
@@ -44,20 +45,30 @@ local function predict(tick: number)
     isPredicting = false
 end
 
+local recentPredictionErrors = 0 -- used to request for full snapshot if things go south
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
+    print("reconcil")
     local predictedEntity = predictedBuffer:get(serverTick)
-    
+
     -- 1. we lagged out past the buffer 2. we dont have the player entity at all yet
     if predictedEntity == nil then
+        -- deep copy here because serverEntity is an actual entity in the world
+        -- so we dont want to reference it
+        serverEntity = deepCopy(serverEntity)
+
         predictedEntity = serverEntity
         playerEntity = serverEntity
         warn(`Received unpredicted state for tick {serverTick}`)
     end
 
-    if Entities.compare(predictedEntity, serverEntity) then return end
+    local areSimilar, mismatchReason = Entities.areSimilar(predictedEntity, serverEntity)
+    if areSimilar then return end
 
+    recentPredictionErrors += 1
     warn(`Prediction error on tick {serverTick}, reconciling`)
-    warn("Predicted", predictedEntity, "Server", serverEntity)
+    warn(`  ->{predictedEntity.kind}[{predictedEntity.id}].{mismatchReason.propName}`)
+    warn(`  ->predicted {mismatchReason.value1}`)
+    warn(`  ->received {mismatchReason.value2}`)
     -- would be neat if we could tell what exactly caused the misprediction
 
     -- Initial reconciliation. Correct initial state
@@ -80,13 +91,15 @@ local function processSnapshots()
         
         local clientEntity: PubTypes.Entity
 
-        for _, entity in ipairs(snapshot.entities) do
+        for _, entityData in ipairs(snapshot.entities) do
+            local entity = Entities.merge(entityData)
+            entity.authority = false
+
+            -- this is our pawn
+            -- even though its set above, the server could still have changed it
             if entity.id == snapshot.clientId then
                 clientEntity = entity
             end
-
-            Entities.override(entity)
-            entity.authority = false
         end
 
         -- delete entities the server deleted
@@ -99,7 +112,11 @@ local function processSnapshots()
             Rpc.runCallback(rpcCall.name, table.unpack(rpcCall.args))
         end
 
-        reconcile(clientEntity, snapshot.tick)
+        -- we didnt receive data about our entity, therefore we dont need to reconcile
+        -- this means that it didnt change since the last tick
+        if clientEntity ~= nil then
+            reconcile(clientEntity, snapshot.tick)
+        end
     end
 end
 
@@ -108,7 +125,12 @@ local function callServerRpc(rpcName: string, ...: any)
     table.insert(pendingServerRpcs, Rpc.makeServerCall(rpcName, ...))
 end
 
+-- we just joined, we want to ask for full snapshot
+local requestedFirstSnapshot = false
+
 local function processTick()
+    recentPredictionErrors = math.max(0, recentPredictionErrors - 0.5)
+
     processSnapshots()
     
     local input = Input.buildInput()
@@ -120,11 +142,14 @@ local function processTick()
 
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
+        recentPredictionErrors > 30 or not requestedFirstSnapshot, -- request full snapshot
         input,
         Input.getInputWriter(),
         pendingServerRpcs
     )
     networkRemote:FireServer(command)
+
+    requestedFirstSnapshot = true
 
     table.clear(pendingServerRpcs)
 end
@@ -182,7 +207,7 @@ end
 -- i DO NOT like this
 Controllers.setClientRpcCallFunction(callClientRpc)
 
-return table.freeze({
+local ArcClient: PubTypes.ArcClient = {
     IS_SERVER = RunService:IsServer();
     IS_CLIENT = RunService:IsClient();
 
@@ -196,35 +221,34 @@ return table.freeze({
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    Entities = table.freeze {
-        spawn = Entities.spawnEntity;
-        delete = Entities.deleteEntityPublic;
+    Entity = Entities.Entity;
+    spawnEntity = Entities.spawnEntity;
+    deleteEntity = Entities.deleteEntityPublic;
 
-        Entity = Entities.Entity;
+    getAllEntities = Entities.getAll;
+    getAllEntitiesWhere = Entities.getAllWhere;
+    getFirstEntityWhere = Entities.getFirstWhere;
+    getEntityById = Entities.getById;
 
-        getAll = Entities.getAll;
-        getAllWhere = Entities.getAllWhere;
-        getFirstWhere = Entities.getFirstWhere;
-        getById = Entities.getById;
-    };
-
-    Rpc = table.freeze {
-        EVERYONE = Rpc.EVERYONE;
+    RPC_EVERYONE = Rpc.EVERYONE;
         
-        Client = Rpc.Client;
-        Server = Rpc.Server;
-        bindCallback = Rpc.bindCallback;
+    ClientRpc = Rpc.Client;
+    ServerRpc = Rpc.Server;
+    bindRpcCallback = Rpc.bindCallback;
 
-        callClient = callClientRpc;
-        callServer = callServerRpc;
+    callClientRpc = callClientRpc;
+    callServerRpc = callServerRpc;
 
-        pauseCulling = Rpc.pauseCulling;
-        resumeCulling = Rpc.resumeCulling;
-        isCulling = Rpc.isCulling;
-    };
+    pauseRpcCulling = Rpc.pauseCulling;
+    resumeRpcCulling = Rpc.resumeCulling;
+    isRpcCulling = Rpc.isCulling;
 
-    Comparison = Comparison;
+    NetVector3 = require(script.Parent.Net.NetVector3);
+
+    Similar = Similar;
 
     addFolder = requireFolder;
     start = start;
-})
+}
+
+return table.freeze(ArcClient)

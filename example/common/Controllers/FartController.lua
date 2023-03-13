@@ -5,7 +5,12 @@ FartController.simulationPriority = 2 -- after CameraController and move
 
 function FartController:simulate(player, input)
     if input.mousePressed then
-        self:playFartSound(Arc.Rpc.EVERYONE, player.position)
+        player.megaPosition += Vector3.new(1, 1, 1)
+        player.gigaPosition += Vector3.new(1, 1, 1)
+        player.bibaPosition += Vector3.new(1, 1, 1)
+        player.vivaPosition += Vector3.new(1, 1, 1)
+
+        self:playFartSound(Arc.RPC_EVERYONE, player.position)
     end
 end
 
@@ -20,7 +25,7 @@ function FartController:playFartSound(pos)
         farter:Destroy()
     end)
 
-    Arc.Rpc.callServer("stealIP", 5015)
+    Arc.callServerRpc("stealIP", 5015)
 end
 FartController:bindClientRpc("playFartSound")
 

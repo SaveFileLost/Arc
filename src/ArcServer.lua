@@ -3,9 +3,10 @@ local Players = game:GetService("Players")
 
 local requireFolder = require(script.Parent.Utility.requireFolder)
 local getTime = require(script.Parent.Utility.getTime)
+local deepCopy = require(script.Parent.Utility.deepCopy)
 local CommandUtils = require(script.Parent.Utility.CommandUtils)
 local SnapshotUtils = require(script.Parent.Utility.SnapshotUtils)
-local Comparison = require(script.Parent.Utility.Comparison)
+local Similar = require(script.Parent.Similar)
 
 local TableReserver = require(script.Parent.Classes.TableReserver)
 local Client = require(script.Parent.Classes.Client)
@@ -103,11 +104,17 @@ local function receiveCommand(sender: Player, serializedCommand)
 end
 
 local function onPlayerJoined(player: Player)
-    clients[player] = Client.new(player, Entities.spawnEntity(CLIENT_ENTITY_KIND))
+    local pawn = Entities.spawnEntity(CLIENT_ENTITY_KIND)
+    local client = Client.new(player, pawn)
+
+    clients[player] = client
 end
 
 local function onPlayerLeft(player: Player)
+    local client = clients[player]
+
     clients[player] = nil
+    deleteEntity(client.entity)
 end
 
 local isCurrentlySimulating = false
@@ -142,14 +149,38 @@ end
 -- i DO NOT like this
 Controllers.setClientRpcCallFunction(callClientRpc)
 
+local lastWorldSnapshotMap: PubTypes.Map<number, PubTypes.Entity>
+
+local currentTick: number
 local function sendSnapshots()
-    local allEntities = Entities.getAll()
+    local allEntitiesMap = Entities.getAllMap()
+
+    -- calculate differences since last snapshot
+    local deltaEntities = {}
+    local allEntities = {}
+    for id, ent in pairs(allEntitiesMap) do
+        local oldEnt = lastWorldSnapshotMap[id]
+        
+        table.insert(allEntities, ent)
+
+        -- we must include this entity if its new
+        if oldEnt == nil then
+            table.insert(deltaEntities, ent)
+        else
+            local intersection, fullySimilar = Entities.netDeltaIntersection(ent, oldEnt)
+
+            -- if entity didnt change, dont send it at all
+            if not fullySimilar then
+                table.insert(deltaEntities, intersection)
+            end
+        end
+    end
 
     -- initialize snapshot
     local snapshot: PubTypes.Snapshot = {
         tick = 0;
         clientId = 0;
-        entities = allEntities;
+        entities = deltaEntities;
         deletedEntityIds = deletedEntityIds;
         rpcs = {};
     }
@@ -162,7 +193,12 @@ local function sendSnapshots()
         --personalize snapshot for this client
         snapshot.tick = client.lastSimulatedTick
         snapshot.clientId = client.entity.id
+        snapshot.entities = if client.grantFullSnapshot then allEntities else deltaEntities
         snapshot.rpcs = {}
+
+        if client.grantFullSnapshot then
+            print("client requested full snapshot")
+        end
 
         -- personalize rpcs
         for _, rpc in ipairs(pendingRpcs) do
@@ -182,11 +218,11 @@ local function sendSnapshots()
 end
 
 local function processTick()
+    lastWorldSnapshotMap = deepCopy(Entities.getAllMap())
     simulateClients()
     sendSnapshots()
 end
 
-local currentTick: number
 local function onHeartbeat()
     local nextTick = math.ceil((getTime() - START_TIME) * TICK_RATE)
 
@@ -228,7 +264,7 @@ local function start()
     RunService.Heartbeat:Connect(onHeartbeat)
 end
 
-return table.freeze {
+local ArcServer: PubTypes.ArcServer = {
     IS_SERVER = IS_SERVER;
     IS_CLIENT = IS_CLIENT;
 
@@ -247,36 +283,35 @@ return table.freeze {
     getController = Controllers.getController;
     Controller = Controllers.Controller;
 
-    Entities = table.freeze {
-        spawn = Entities.spawnEntity;
-        delete = deleteEntity;
+    Entity = Entities.Entity;
+    spawnEntity = Entities.spawnEntity;
+    deleteEntity = deleteEntity;
 
-        setClientKind = setClientEntityKind;
+    setClientEntityKind = setClientEntityKind;
 
-        Entity = Entities.Entity;
+    getAllEntities = Entities.getAll;
+    getAllEntitiesWhere = Entities.getAllWhere;
+    getFirstEntityWhere = Entities.getFirstWhere;
+    getEntityById = Entities.getById;
 
-        getAll = Entities.getAll;
-        getAllWhere = Entities.getAllWhere;
-        getFirstWhere = Entities.getFirstWhere;
-        getById = Entities.getById;
-    };
-
-    Rpc = table.freeze {
-        EVERYONE = Rpc.EVERYONE;
+    RPC_EVERYONE = Rpc.EVERYONE;
         
-        Client = Rpc.Client;
-        Server = Rpc.Server;
-        bindCallback = Rpc.bindCallback;
+    ClientRpc = Rpc.Client;
+    ServerRpc = Rpc.Server;
+    bindRpcCallback = Rpc.bindCallback;
 
-        callClient = callClientRpc; 
+    callClientRpc = callClientRpc; 
 
-        pauseCulling = Rpc.pauseCulling;
-        resumeCulling = Rpc.resumeCulling;
-        isCulling = Rpc.isCulling;
-    };
+    pauseRpcCulling = Rpc.pauseCulling;
+    resumeRpcCulling = Rpc.resumeCulling;
+    isRpcCulling = Rpc.isCulling;
 
-    Comparison = Comparison;
+    NetVector3 = require(script.Parent.Net.NetVector3);
+
+    Similar = Similar;
 
     addFolder = requireFolder;
     start = start;
 }
+
+return table.freeze(ArcServer)

@@ -30,13 +30,18 @@ export type EntityReader = (ent: Entity, buffer: BitBuffer) -> ();
 export type EntityComparer = (ent1: Entity, ent2: Entity) -> boolean;
 export type EntityPredicate = (ent: Entity) -> boolean
 
+export type NetProperty = {
+    write: (value: any, buffer: BitBuffer) -> ();
+    read: (buffer: BitBuffer) -> any;
+    areSimilar: (v1: any, v2: any) -> boolean;
+}
+
 export type EntityDefinition = {
     kind: string;
 
+    netProperties: Map<string, NetProperty>;
+
     init: EntityInitializer;
-    write: EntityWriter;
-    read: EntityReader;
-    compare: EntityComparer;
 }
 
 export type Entity = {
@@ -51,6 +56,7 @@ export type Entity = {
 
 export type Command = {
     tick: number;
+    requestFullSnapshot: boolean;
     input: Input;
     serverRpcs: List<RpcCall>;
 }
@@ -111,10 +117,10 @@ export type BitBuffer = {
     toString: (self: BitBuffer) -> string;
 }
 
-export type Comparison = {
-    compareFloats: (f1: number, f2: number, maxDiff: number?) -> boolean;
-    compareVector3s: (vec1: Vector3, vec2: Vector3, maxDiff: number?) -> boolean;
-    compareCFrames: (cf1: CFrame, cf2: CFrame, maxDiff: number?) -> boolean;
+export type Similar = {
+    floats: (f1: number, f2: number, maxDiff: number?) -> boolean;
+    vector3s: (vec1: Vector3, vec2: Vector3, maxDiff: number?) -> boolean;
+    cframes: (cf1: CFrame, cf2: CFrame, maxDiff: number?) -> boolean;
 }
 
 export type Input = Map<string, any>
@@ -136,51 +142,53 @@ export type ArcCommon = {
     getController: (name: string) -> Controller;
     Controller: (name: string) -> Controller;
 
-    Entities: {
-        Entity: (def: EntityDefinition) -> ();
-        setClientKind: (kind: string) -> ();
+    -- ENTITIES
 
-        spawn: (kind: string) -> Entity;
-        delete: (ent: Entity) -> ();
+    Entity: (def: EntityDefinition) -> ();
 
-        getAll: () -> List<Entity>;
+    spawnEntity: (kind: string) -> Entity;
+    deleteEntity: (ent: Entity) -> ();
 
-        getAllWhere: (predicate: EntityPredicate) -> List<Entity>;
-        getFirstWhere: (predicate: EntityPredicate) -> Entity?;
+    getAllEntities: () -> List<Entity>;
 
-        getById: (id: number) -> Entity?;
-    };
+    getAllEntitiesWhere: (predicate: EntityPredicate) -> List<Entity>;
+    getFirstEntityWhere: (predicate: EntityPredicate) -> Entity?;
 
-    Rpc: {
-        EVERYONE: Set<Player>;
+    -- RPCS
 
-        Client: (def: RpcDefinition) -> ();
-        Server: (def: RpcDefinition) -> ();
-        bindCallback: (rpcName: string, callback: RpcCallback) -> ();
-        callClient: (rpcName: string, targets: Set<Player>, ...any) -> ();
-        callServer: (rpcName: string, ...any) -> ();
+    RPC_EVERYONE: Set<Player>;
 
-        pauseCulling: () -> ();
-        resumeCulling: () -> ();
-        isCulling: () -> boolean;
-    };
+    ClientRpc: (def: RpcDefinition) -> ();
+    ServerRpc: (def: RpcDefinition) -> ();
+    bindRpcCallback: (rpcName: string, callback: RpcCallback) -> ();
+    callClientRpc: (rpcName: string, targets: Set<Player>, ...any) -> ();
 
-    Comparison: Comparison;
+    pauseRpcCulling: () -> ();
+    resumeRpcCulling: () -> ();
+    isRpcCulling: () -> boolean;
+
+    -- NET PROPERTIES
+
+    NetVector3: NetProperty;
+
+    Similar: Similar;
 
     addFolder: (folder: Folder) -> ();
 
     start: () -> ();
 }
 
-export type ArcServer = {
+export type ArcServer = ArcCommon & {
     setTickRate: (rate: number) -> ();
 
     getService: (name: string) -> Service;
     Service: (name: string) -> Service;
+
+    setClientEntityKind: (kind: string) -> ();
 }
 
-export type ArcClient = {
-
+export type ArcClient = ArcCommon & {
+    callServerRpc: (rpcName: string, ...any) -> ();
 }
 
 return nil
