@@ -5,7 +5,7 @@ local SomeService = Arc.Service "SomeService"
 function SomeService:init()
 end
 
-function SomeService:stealIP(player: Player, num: number)
+function SomeService:serverRpcTest(player: Player, num: number)
     print("received server rpc", player, num)
 end
 SomeService:bindServerRpc("serverRpcTest")

@@ -24,24 +24,27 @@ export type Controller = {
     bindClientRpc: (self: Controller, name: string) -> ();
 }
 
-export type EntityInitializer = (ent: Entity) -> ();
-export type EntityWriter = (ent: Entity, buffer: BitBuffer) -> ();
-export type EntityReader = (ent: Entity, buffer: BitBuffer) -> ();
-export type EntityComparer = (ent1: Entity, ent2: Entity) -> boolean;
-export type EntityPredicate = (ent: Entity) -> boolean
-
 export type NetProperty = {
     write: (value: any, buffer: BitBuffer) -> ();
     read: (buffer: BitBuffer) -> any;
     areSimilar: (v1: any, v2: any) -> boolean;
 }
 
+export type EntityMethod = (ent: Entity) -> ();
+export type EntityWriter = (ent: Entity, buffer: BitBuffer) -> ();
+export type EntityReader = (ent: Entity, buffer: BitBuffer) -> ();
+export type EntityComparer = (ent1: Entity, ent2: Entity) -> boolean;
+export type EntityPredicate = (ent: Entity) -> boolean
+
 export type EntityDefinition = {
     kind: string;
 
     netProperties: Map<string, NetProperty>;
 
-    init: EntityInitializer;
+    init: EntityMethod;
+    cleanup: EntityMethod?;
+    clientSpawn: EntityMethod?;
+    clientDelete: EntityMethod?;
 }
 
 export type Entity = {

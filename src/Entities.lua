@@ -2,13 +2,13 @@ local HttpService = game:GetService("HttpService")
 
 local IS_CLIENT = game:GetService("RunService"):IsClient()
 
-local BitBuffer = require(script.Parent.Classes.BitBuffer)
-
 local PubTypes = require(script.Parent.PubTypes)
 local Types = require(script.Parent.Types)
 
 local entityKinds: PubTypes.Map<string, Types.EntityKind> = {}
 local entities: PubTypes.Map<number, PubTypes.Entity> = {}
+
+local function emptyFunc() end
 
 local function Entity(def: PubTypes.EntityDefinition)
     assert(entityKinds[def.kind] == nil, `Entity kind {def.kind} already exists`)
@@ -31,6 +31,9 @@ local function Entity(def: PubTypes.EntityDefinition)
         netPropertyNameToId = netPropertyNameToId;
 
         initializer = def.init;
+        cleanup = def.cleanup or emptyFunc;
+        clientSpawn = def.clientSpawn or emptyFunc;
+        clientDelete = def.clientDelete or emptyFunc;
     }
 end
 
@@ -80,6 +83,10 @@ local function deleteEntityInternal(ent: PubTypes.Entity)
     
     local entity = entities[ent.id]
     assert(entity ~= nil, `Tried to remove non existent entity {ent.id}`)
+
+    if entity.authority then
+        entityKinds[ent.kind].cleanup(ent)
+    end
 
     entity.active = false
     entities[ent.id] = nil
@@ -265,14 +272,18 @@ local function merge(entity: PubTypes.Entity)
     -- entity we want to merge into doesnt exist, create from this
     if intoEntity == nil then
         entities[entity.id] = entity
-        return entity
+        return entity, false
     end
 
     for k, v in pairs(entity) do
         intoEntity[k] = v
     end
 
-    return intoEntity
+    return intoEntity, true
+end
+
+local function getKind(kind: string): Types.EntityKind
+    return entityKinds[kind]
 end
 
 return table.freeze({
@@ -299,4 +310,5 @@ return table.freeze({
     getFirstWhere = getFirstWhere;
 
     getById = getById;
+    getKind = getKind;
 })

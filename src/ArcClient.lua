@@ -92,8 +92,13 @@ local function processSnapshots()
         local clientEntity: PubTypes.Entity
 
         for _, entityData in ipairs(snapshot.entities) do
-            local entity = Entities.merge(entityData)
+            local entity, existed = Entities.merge(entityData)
             entity.authority = false
+
+            -- this is the first time the server sent us this entity
+            if not existed then
+                Entities.getKind(entity.kind).clientSpawn(entity)
+            end
 
             -- this is our pawn
             -- even though its set above, the server could still have changed it
@@ -104,7 +109,11 @@ local function processSnapshots()
 
         -- delete entities the server deleted
         for _, id in ipairs(snapshot.deletedEntityIds) do
-            Entities.deleteEntity(id)
+            local ent = Entities.getById(id)
+            if ent == nil then continue end
+
+            Entities.getKind(ent.kind).clientDelete(ent)
+            Entities.deleteEntity(ent)
         end
 
         -- run rpcs the server sent
