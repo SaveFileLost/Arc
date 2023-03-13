@@ -129,7 +129,7 @@ end
 local requestedFirstSnapshot = false
 
 local function processTick()
-    recentPredictionErrors = math.max(0, recentPredictionErrors - 1)
+    recentPredictionErrors = math.max(0, recentPredictionErrors - 0.5)
 
     processSnapshots()
     
@@ -142,7 +142,7 @@ local function processTick()
 
     local command = CommandUtils.generateSerializedCommand(
         currentTick,
-        recentPredictionErrors > 20 or not requestedFirstSnapshot, -- request full snapshot
+        recentPredictionErrors > 30 or not requestedFirstSnapshot, -- request full snapshot
         input,
         Input.getInputWriter(),
         pendingServerRpcs
