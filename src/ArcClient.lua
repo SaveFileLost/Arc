@@ -47,7 +47,6 @@ end
 
 local recentPredictionErrors = 0 -- used to request for full snapshot if things go south
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
-    print("reconcil")
     local predictedEntity = predictedBuffer:get(serverTick)
 
     -- 1. we lagged out past the buffer 2. we dont have the player entity at all yet
