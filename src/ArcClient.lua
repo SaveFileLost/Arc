@@ -47,6 +47,7 @@ end
 
 local recentPredictionErrors = 0 -- used to request for full snapshot if things go south
 local function reconcile(serverEntity: PubTypes.Entity, serverTick: number)
+    print("reconcil")
     local predictedEntity = predictedBuffer:get(serverTick)
 
     -- 1. we lagged out past the buffer 2. we dont have the player entity at all yet
@@ -88,7 +89,7 @@ local function processSnapshots()
         local serializedSnapshot = table.remove(pendingSnapshots, #pendingSnapshots)
         local snapshot = SnapshotUtils.deserialize(serializedSnapshot)
         
-        local clientEntity: PubTypes.Entity = playerEntity
+        local clientEntity: PubTypes.Entity
 
         for _, entityData in ipairs(snapshot.entities) do
             local entity = Entities.merge(entityData)
@@ -111,7 +112,11 @@ local function processSnapshots()
             Rpc.runCallback(rpcCall.name, table.unpack(rpcCall.args))
         end
 
-        reconcile(clientEntity, snapshot.tick)
+        -- we didnt receive data about our entity, therefore we dont need to reconcile
+        -- this means that it didnt change since the last tick
+        if clientEntity ~= nil then
+            reconcile(clientEntity, snapshot.tick)
+        end
     end
 end
 

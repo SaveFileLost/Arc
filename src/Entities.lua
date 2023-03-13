@@ -27,7 +27,6 @@ local function Entity(def: PubTypes.EntityDefinition)
 
     entityKinds[def.kind] = {
         netProperties = def.netProperties;
-        netPropertyCount = netPropertyId; -- total amount of net properties
         netPropertyIdToName = netPropertyIdToName;
         netPropertyNameToId = netPropertyNameToId;
 
@@ -122,17 +121,26 @@ local function setKindIdentifiersFromJson(kindIdents: string)
     end
 end
 
-local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer, excludeProps: PubTypes.List<string>)
+local function serialize(ent: PubTypes.Entity, buffer: PubTypes.BitBuffer)
     buffer:writeUInt(16, kindToIdMap[ent.kind])
     -- UInt because we will only ever need to serialize server entities, and they are unsigned
     buffer:writeUInt(24, ent.id)
 
     local kind = entityKinds[ent.kind]
+
+    -- how many net properties this entity has set
+    local netPropertyCount = 0
+    for propName in pairs(kind.netProperties) do
+        -- if its nil, its not replicated
+        if ent[propName] == nil then continue end
+        netPropertyCount += 1
+    end
+
     -- how many properties we are replicating
-    buffer:writeUInt(8, kind.netPropertyCount - #excludeProps)
+    buffer:writeUInt(8, netPropertyCount)
 
     for propName, netProp in pairs(kind.netProperties) do
-        if table.find(excludeProps, propName) then continue end
+        if ent[propName] == nil then continue end
 
         -- write property identifier to let us distinguish properties when deserializing
         buffer:writeUInt(8, kind.netPropertyNameToId[propName])
@@ -175,6 +183,33 @@ local function areSimilar(entity1: PubTypes.Entity, entity2: PubTypes.Entity): (
     return true
 end
 
+-- return an entity with only the net properties that have changed
+-- used for delta compression
+local function netDeltaIntersection(current: PubTypes.Entity, old: PubTypes.Entity): (PubTypes.Entity, boolean)
+    assert(current.kind == current.kind, "Tried getting difference for 2 entities of different kinds")
+    local entKind = entityKinds[current.kind]
+    
+    local diff: PubTypes.Entity = {
+        kind = current.kind;
+        id = current.id;
+        authority = current.authority;
+        active = current.active;
+    }
+
+    local diffCount = 0
+    for propName, netProp in pairs(entKind.netProperties) do
+        local prop1 = current[propName]
+        local prop2 = old[propName]
+        if not netProp.areSimilar(prop1, prop2) then
+            diff[propName] = prop1
+            diffCount += 1
+        end
+    end
+
+    -- return the diff, fullySimilar
+    return diff, diffCount == 0
+end
+
 local function getAll(): PubTypes.List<PubTypes.Entity>
     local entList = {}
     for _, v in pairs(entities) do
@@ -182,6 +217,10 @@ local function getAll(): PubTypes.List<PubTypes.Entity>
     end
 
     return entList
+end
+
+local function getAllMap(): PubTypes.Map<number, PubTypes.Entity>
+    return table.clone(entities)
 end
 
 local function getAllWhere(predicate: PubTypes.EntityPredicate): PubTypes.List<PubTypes.Entity>
@@ -230,7 +269,6 @@ local function merge(entity: PubTypes.Entity)
     end
 
     for k, v in pairs(entity) do
-        print("merged",k,v)
         intoEntity[k] = v
     end
 
@@ -252,8 +290,10 @@ return table.freeze({
     serialize = serialize;
     deserialize = deserialize;
     areSimilar = areSimilar;
+    netDeltaIntersection = netDeltaIntersection;
 
     getAll = getAll;
+    getAllMap = getAllMap;
 
     getAllWhere = getAllWhere;
     getFirstWhere = getFirstWhere;

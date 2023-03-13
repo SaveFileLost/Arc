@@ -3,7 +3,6 @@ local getTime = require(script.Parent.Parent.Utility.getTime)
 local Controllers = require(script.Parent.Parent.Controllers)
 local PubTypes = require(script.Parent.Parent.PubTypes)
 
-
 local Client = {}
 Client.__index = Client
 
@@ -31,7 +30,7 @@ function Client:processCommands()
 		if command.requestFullSnapshot and getTime() - self.lastFullSnapshot > 20 then
 			self.grantFullSnapshot = true
 		end
-
+		
 		Controllers.simulate(self.entity, command.input)
 		
 		self.lastSimulatedTick = command.tick

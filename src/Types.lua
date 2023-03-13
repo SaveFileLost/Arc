@@ -2,7 +2,6 @@ local PubTypes = require(script.Parent.PubTypes)
 
 export type EntityKind = {
     netProperties: PubTypes.Map<string, PubTypes.NetProperty>;
-    netPropertyCount: number;
     netPropertyIdToName: PubTypes.Map<number, string>;
     netPropertyNameToId: PubTypes.Map<string, number>;
 

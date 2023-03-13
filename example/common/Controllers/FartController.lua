@@ -5,6 +5,11 @@ FartController.simulationPriority = 2 -- after CameraController and move
 
 function FartController:simulate(player, input)
     if input.mousePressed then
+        player.megaPosition += Vector3.new(1, 1, 1)
+        player.gigaPosition += Vector3.new(1, 1, 1)
+        player.bibaPosition += Vector3.new(1, 1, 1)
+        player.vivaPosition += Vector3.new(1, 1, 1)
+
         self:playFartSound(Arc.RPC_EVERYONE, player.position)
     end
 end
