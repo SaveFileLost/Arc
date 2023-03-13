@@ -1,15 +1,15 @@
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 
-local FartController = Arc.Controller "FartController"
-FartController.simulationPriority = 2 -- after CameraController and move
+local PartController = Arc.Controller "PartController"
+PartController.simulationPriority = 2 -- after CameraController and move
 
-function FartController:simulate(player, input)
+function PartController:simulate(player, input)
     if input.mousePressed then
         self:createPart(Arc.RPC_EVERYONE, player.position)
     end
 end
 
-function FartController:createPart(pos)
+function PartController:createPart(pos)
     local part = Instance.new("Part")
     part.Position = pos
     part.Parent = workspace
@@ -18,6 +18,6 @@ function FartController:createPart(pos)
 
     Arc.callServerRpc("serverRpcTest", 5015)
 end
-FartController:bindClientRpc("createPart")
+PartController:bindClientRpc("createPart")
 
 return nil
