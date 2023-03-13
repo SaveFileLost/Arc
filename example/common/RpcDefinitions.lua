@@ -12,8 +12,8 @@ Arc.ClientRpc {
 
 Arc.ServerRpc {
     name = "serverRpcTest";
-    write = function(buf, ip)
-        buf:writeUInt(16, ip)
+    write = function(buf, someUInt)
+        buf:writeUInt(16, someUInt)
     end;
     read = function(buffer)
         return buffer:readUInt(16)
