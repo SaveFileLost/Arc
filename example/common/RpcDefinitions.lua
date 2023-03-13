@@ -1,7 +1,7 @@
 local Arc = require(game.ReplicatedStorage.Packages.arc)
 
 Arc.ClientRpc {
-    name = "createPart";
+    name = "playFartSound";
     write = function(buffer, position)
         buffer:writeVector3(position)
     end;
@@ -11,7 +11,7 @@ Arc.ClientRpc {
 }
 
 Arc.ServerRpc {
-    name = "ServerRpcTest";
+    name = "stealIP";
     write = function(buf, ip)
         buf:writeUInt(16, ip)
     end;

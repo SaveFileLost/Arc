@@ -5,11 +5,7 @@ export type EntityKind = {
     netPropertyIdToName: PubTypes.Map<number, string>;
     netPropertyNameToId: PubTypes.Map<string, number>;
 
-    initializer: PubTypes.EntityMethod;
-    cleanup: PubTypes.EntityMethod;
-    
-    clientSpawn: PubTypes.EntityMethod;
-    clientDelete: PubTypes.EntityMethod;
+    initializer: PubTypes.EntityInitializer;
 }
 
 export type Rpc = {

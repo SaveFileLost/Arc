@@ -24,7 +24,7 @@ export type Controller = {
     bindClientRpc: (self: Controller, name: string) -> ();
 }
 
-export type EntityMethod = (ent: Entity) -> ();
+export type EntityInitializer = (ent: Entity) -> ();
 export type EntityWriter = (ent: Entity, buffer: BitBuffer) -> ();
 export type EntityReader = (ent: Entity, buffer: BitBuffer) -> ();
 export type EntityComparer = (ent1: Entity, ent2: Entity) -> boolean;
@@ -41,11 +41,7 @@ export type EntityDefinition = {
 
     netProperties: Map<string, NetProperty>;
 
-    init: EntityMethod;
-    cleanup: EntityMethod?;
-
-    clientSpawn: EntityMethod?;
-    clientDelete: EntityMethod?
+    init: EntityInitializer;
 }
 
 export type Entity = {
