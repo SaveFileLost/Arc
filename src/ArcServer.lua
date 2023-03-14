@@ -47,6 +47,7 @@ end
 local function Service(name: string): PubTypes.Service
     local service = serviceReserver:getOrReserve(name)
     service.name = name
+    service.tickPriority = 0
 
     service.init = function() end
     service.start = function() end
@@ -69,6 +70,8 @@ local function Service(name: string): PubTypes.Service
     return service
 end
 
+local tickableServices: PubTypes.List<PubTypes.Service> = {}
+
 local function startServices()
      -- check for undeclared services
      for name in pairs(serviceReserver.reserve) do
@@ -76,11 +79,28 @@ local function startServices()
     end
 
     for _, service in pairs(serviceMap) do
+        if service[tick] then
+            table.insert(tickableServices, service)
+        end
+
         service:init()
     end
 
+    -- priority goes from lesser to higher
+    table.sort(tickableServices, function(sv1, sv2)
+        return (sv1.tickPriority or 0) < (sv2.tickPriority or 0)
+    end)
+
     for _, service in pairs(serviceMap) do
         service:start()
+    end
+end
+
+local currentTick: number
+
+local function runServiceTick()
+    for _, service in ipairs(tickableServices) do
+        service:tick(currentTick)
     end
 end
 
@@ -151,7 +171,6 @@ Controllers.setClientRpcCallFunction(callClientRpc)
 
 local lastWorldSnapshotMap: PubTypes.Map<number, PubTypes.Entity>
 
-local currentTick: number
 local function sendSnapshots()
     local allEntitiesMap = Entities.getAllMap()
 
@@ -216,6 +235,7 @@ end
 local function processTick()
     lastWorldSnapshotMap = deepCopy(Entities.getAllMap())
     simulateClients()
+    runServiceTick()
     sendSnapshots()
 end
 

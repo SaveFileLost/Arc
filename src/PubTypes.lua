@@ -4,9 +4,12 @@ export type Set<T> = {[T]: true}
 
 export type Service = {
     name: string;
+    tickPriority: number;
     
     init: (self: Service) -> ();
     start: (self: Service) -> ();
+
+    tick: (self: Service, tick: number) -> ();
 
     bindServrRpc: (self: Controller, name: string) -> ();
 
