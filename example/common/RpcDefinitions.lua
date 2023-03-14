@@ -1,4 +1,4 @@
-local Arc = require(game.ReplicatedStorage.Packages.arc).common()
+local Arc = require(game.ReplicatedStorage.Packages.arc)
 
 Arc.ClientRpc {
     name = "createPart";
