@@ -18,6 +18,7 @@ end
 local function Controller(name: string): PubTypes.Controller
     local controller = controllerReserver:getOrReserve(name)
     controller.name = name
+    controller.simulationPriority = 0
 
     function controller:init() end
     function controller:start() end

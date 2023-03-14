@@ -18,7 +18,7 @@ export type Service = {
 
 export type Controller = {
     name: string;
-    simulationPriority: number?;
+    simulationPriority: number;
     
     init: (self: Controller) -> ();
     start: (self: Controller) -> ();
