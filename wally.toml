@@ -1,6 +1,6 @@
 [package]
 name = "weldify/arc"
-version = "0.1.0-beta2"
+version = "0.1.0-beta3"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
