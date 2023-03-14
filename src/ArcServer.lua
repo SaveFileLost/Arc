@@ -114,12 +114,12 @@ local clients = {}
 
 local function receiveCommand(sender: Player, serializedCommand)
     local command = CommandUtils.deserializeCommand(serializedCommand, Input.getInputReader())
+    local client = clients[sender]
 
     for _, call in ipairs(command.serverRpcs) do
-        Rpc.runCallback(call.name, sender, table.unpack(call.args))
+        Rpc.runCallback(call.name, client.entity, table.unpack(call.args))
     end
 
-    local client = clients[sender]
     client:pushCommand(command)
 end
 
