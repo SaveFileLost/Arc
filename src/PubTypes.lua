@@ -172,6 +172,7 @@ export type ArcCommon = {
     ServerRpc: (def: RpcDefinition) -> ();
     bindRpcCallback: (rpcName: string, callback: RpcCallback) -> ();
     callClientRpc: (rpcName: string, targets: Set<Player>, ...any) -> ();
+    callServerRpc: (rpcName: string, ...any) -> ();
 
     pauseRpcCulling: () -> ();
     resumeRpcCulling: () -> ();
@@ -198,7 +199,7 @@ export type ArcServer = ArcCommon & {
 }
 
 export type ArcClient = ArcCommon & {
-    callServerRpc: (rpcName: string, ...any) -> ();
+    
 }
 
 return nil

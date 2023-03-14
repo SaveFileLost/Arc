@@ -169,6 +169,10 @@ end
 -- i DO NOT like this
 Controllers.setClientRpcCallFunction(callClientRpc)
 
+local function callServerRpc()
+    -- empty since server rpc calls are not predictable, but we still want them to exist in a shared context
+end
+
 local lastWorldSnapshotMap: PubTypes.Map<number, PubTypes.Entity>
 
 local function sendSnapshots()
@@ -316,7 +320,8 @@ local ArcServer: PubTypes.ArcServer = {
     ServerRpc = Rpc.Server;
     bindRpcCallback = Rpc.bindCallback;
 
-    callClientRpc = callClientRpc; 
+    callClientRpc = callClientRpc;
+    callServerRpc = callServerRpc;
 
     pauseRpcCulling = Rpc.pauseCulling;
     resumeRpcCulling = Rpc.resumeCulling;
