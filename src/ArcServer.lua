@@ -79,7 +79,7 @@ local function startServices()
     end
 
     for _, service in pairs(serviceMap) do
-        if service[tick] then
+        if service.tick then
             table.insert(tickableServices, service)
         end
 
